@@ -10,6 +10,8 @@ import 'dispatch_plan_screen.dart';
 import '../screens/ev_operations_screen.dart';
 import '../services/session_manager.dart';
 import '../screens/dispatch_plan_report_screen.dart';
+import '../PrevMnt/services/PrevMnt_api_services.dart';
+import '../PrevMnt/screens/PrevMntHomeScreen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -23,6 +25,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<String> menus = [];
   bool isLoading = true;
   bool get  hasEVPermission => menus.contains("mnuMblEVRead");
+  bool get hasPrevMntPermission => menus.contains("mnuPrevMnt");
   String getGreeting() {
   final hour = DateTime.now().hour;
 
@@ -63,6 +66,62 @@ void initState() {
 
   setState(() {});
 }
+
+  // ================= OPEN PREVENTIVE MAINTENANCE MODULE =================
+  Future<void> openPrevMnt(BuildContext context) async {
+    LoaderService.show(
+      context,
+      title: "Loading Preventive Maintenance",
+      subtitle: "Authenticating...",
+    );
+
+    try {
+      final session = await SessionManager.getSession();
+
+      if (session == null) {
+        LoaderService.hide();
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Session expired. Please log in again.")),
+        );
+        return;
+      }
+
+      final response = await PrevMntApiService.login(
+        session["userId"],
+        session["password"],
+      );
+
+      LoaderService.hide();
+
+      if (!context.mounted) return;
+
+      if (response["StatusCode"] == 200) {
+        // Save role/userName for screens inside the module that read from prefs
+        final prefs = await SharedPreferences.getInstance();
+        bool isSupervisor = response["IsSupervisor"] ?? false;
+        await prefs.setString("role", isSupervisor ? "Supervisor" : "Employee");
+        await prefs.setString("userName", response["UserName"] ?? userName);
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PrevMntHomeScreen(userData: response),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response["Message"] ?? "Preventive Maintenance login failed")),
+        );
+      }
+    } catch (e) {
+      LoaderService.hide();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  }
 
   void logout() {
   showDialog(
@@ -441,92 +500,81 @@ void initState() {
 
   const SizedBox(height: 25),
 ],
-
-
-const Text(
-  "Preventive Maintenance",
-  style: TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w700,
-    color: Color(0xFF111827),
+if (hasPrevMntPermission) ...[
+  const Text(
+    "Preventive Maintenance",
+    style: TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w700,
+      color: Color(0xFF111827),
+    ),
   ),
-),
 
-const SizedBox(height: 12),
+  const SizedBox(height: 12),
 
-InkWell(
-  onTap: () {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          "Available in separate app (coming soon here)",
-        ),
+  InkWell(
+    onTap: () {
+      openPrevMnt(context);
+    },
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-    );
-  },
-  child: Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 15,
-          offset: const Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE7F8EF),
-            borderRadius: BorderRadius.circular(14),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE7F8EF),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.build_circle_outlined,
+              color: Color(0xFF059669),
+              size: 24,
+            ),
           ),
-          child: const Icon(
-            Icons.build_circle_outlined,
-            color: Color(0xFF059669),
-            size: 24,
-          ),
-        ),
-
-        const SizedBox(width: 12),
-
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              Text(
-                "Preventive Maintenance",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Preventive Maintenance",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-
-              SizedBox(height: 3),
-
-              Text(
-                "Machine Service Scheduling",
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
+                SizedBox(height: 3),
+                Text(
+                  "Machine Service Scheduling",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-
-        const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
-      ],
+          const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+        ],
+      ),
     ),
   ),
-),
+],
+
+
             
                                         ],
                                       ),
@@ -542,14 +590,14 @@ InkWell(
 
     final Map<String, dynamic> map = {
   "mnuProdDOPlanSOItem": {
-    "title": "Production",
-    "subtitle": "Dispatch Planning",
+    "title": "Dispatch Planning",
+    "subtitle": "Plan Dispatch",
     "icon": Icons.local_shipping_outlined,
     "color": const Color.fromARGB(255, 236, 240, 32),
   },
   "mnuRptDispatchDispPlans": {
-  "title": "Dispatch Report",
-  "subtitle": "Analytics & Reports",
+  "title": "Planning Report",
+  "subtitle": "Dispatch Plan Analytics",
   "icon": Icons.analytics_outlined,
   "color": const Color(0xFF0891B2),
 },
@@ -562,8 +610,8 @@ InkWell(
   },
 
   "mnuRptSOStatus": {
-    "title": "Sales Orders",
-    "subtitle": "Customer Orders",
+    "title": "SO Status Report",
+    "subtitle": "Sales Order Tracking",
     "icon": Icons.receipt_long,
     "color": const Color(0xFFF59E0B),
   },
