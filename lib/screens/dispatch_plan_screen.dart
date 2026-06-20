@@ -49,33 +49,130 @@ void initState() {
 }
 
 Future<void> loadData() async {
+  // Overlay.of(...).insert(...) cannot run while Flutter is still building
+  // the current frame (which is the case here, since loadData() is called
+  // from initState()). We wait for the frame to finish using a Completer
+  // tied to addPostFrameCallback, THEN start the actual fetch — so show()
+  // is guaranteed to succeed before any network call begins, and hide()
+  // in finally always matches a loader that's actually on screen.
+  if (!mounted) return;
+
+  final frameDone = Completer<void>();
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    LoaderService.show(
-      context,
-      title: "Loading Dispatch Plan",
-      subtitle: "Fetching data from server...",
-    );
+    if (!frameDone.isCompleted) frameDone.complete();
   });
+  await frameDone.future;
+
+  if (!mounted) return;
+
+  LoaderService.show(
+    context,
+    title: "Loading Dispatch Plan",
+    subtitle: "Fetching data from server...",
+  );
 
   try {
-    final results = await Future.wait([
-      ApiService.getDispatchPlanList(widget.userId),
-      ApiService.getDispatchPlanFilters(widget.userId),
-    ]);
+    final data = await ApiService.getDispatchPlanList(widget.userId);
 
-    final data = results[0] as List<DispatchPlanRowModel>;
-    final filters = results[1] as DispatchPlanModel;
+    if (!mounted) return;
 
     setState(() {
       allRecords = data;
       records = data;
-      filterData = filters;
+      filterData = _buildFiltersFromRecords(data);
     });
   } catch (e) {
     debugPrint("LOAD ERROR: $e");
   } finally {
     LoaderService.hide();
   }
+}
+
+// Derives filter dropdown data (factories, marketing persons, client
+// groups, clients + their sites, products) directly from the dispatch
+// plan list itself. Replaces the old getDispatchPlanFilters() call, which
+// hit the same DPlanData endpoint as the list and got back list-shaped
+// JSON (no Factories/MktPersons/Clients/Products keys), causing
+// DispatchPlanModel.fromJson() to fail silently and hang the loader.
+DispatchPlanModel _buildFiltersFromRecords(List<DispatchPlanRowModel> data) {
+  final factoryNames = <String>{};
+  final factories = <FactoryModel>[];
+  for (final row in data) {
+    if (row.factory.isNotEmpty && factoryNames.add(row.factory)) {
+      factories.add(FactoryModel(id: factories.length + 1, name: row.factory));
+    }
+  }
+
+  final mktNames = <String>{};
+  final mktPersons = <MktPersonModel>[];
+  for (final row in data) {
+    if (row.mktPerson.isNotEmpty && mktNames.add(row.mktPerson)) {
+      mktPersons.add(MktPersonModel(id: mktPersons.length + 1, name: row.mktPerson));
+    }
+  }
+
+  final clientGroups = <String>{};
+  for (final row in data) {
+    if (row.clientGroup.isNotEmpty) {
+      clientGroups.add(row.clientGroup);
+    }
+  }
+
+  final mktIdByName = <String, int>{
+    for (final m in mktPersons) m.name: m.id,
+  };
+
+  final clientOrder = <String>[];
+  final clientGroupByName = <String, String>{};
+  final clientMktNameByName = <String, String>{};
+  final clientSites = <String, Set<String>>{};
+
+  for (final row in data) {
+    if (row.client.isEmpty) continue;
+
+    if (!clientSites.containsKey(row.client)) {
+      clientOrder.add(row.client);
+      clientGroupByName[row.client] = row.clientGroup;
+      clientMktNameByName[row.client] = row.mktPerson;
+      clientSites[row.client] = {};
+    }
+
+    if (row.site.isNotEmpty) {
+      clientSites[row.client]!.add(row.site);
+    }
+  }
+
+  final clients = <ClientModel>[];
+  for (int i = 0; i < clientOrder.length; i++) {
+    final name = clientOrder[i];
+    final sites = clientSites[name]!
+        .map((siteName) => SiteModel(siteId: 0, siteName: siteName))
+        .toList();
+
+    clients.add(ClientModel(
+      id: i + 1,
+      name: name,
+      clientGroup: clientGroupByName[name] ?? "",
+      mktPersonId: mktIdByName[clientMktNameByName[name]] ?? 0,
+      sites: sites,
+    ));
+  }
+
+  final productNames = <String>{};
+  final products = <ProductModel>[];
+  for (final row in data) {
+    if (row.product.isNotEmpty && productNames.add(row.product)) {
+      products.add(ProductModel(id: products.length + 1, productName: row.product));
+    }
+  }
+
+  return DispatchPlanModel(
+    factories: factories,
+    mktPersons: mktPersons,
+    clientGroups: clientGroups.toList(),
+    clients: clients,
+    products: products,
+  );
 }
 
 Future<void> fetchDispatchPlans() async {
@@ -96,10 +193,11 @@ Future<void> fetchDispatchPlans() async {
 }
 
 Future<void> fetchFilters() async {
-  final data = await ApiService.getDispatchPlanFilters(widget.userId);
-
+  // NOTE: filters are now derived locally from allRecords via
+  // _buildFiltersFromRecords(), not fetched from a separate endpoint —
+  // DPlanData only returns the list, not filter-shaped data.
   setState(() {
-    filterData = data;
+    filterData = _buildFiltersFromRecords(allRecords);
   });
 }
 Future<void> fetchPlans() async {

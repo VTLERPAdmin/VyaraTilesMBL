@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart ';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/loader_service.dart';
 import '../services/api_services.dart';
 import '../services/session_manager.dart';
 import '../screens/dashboard_screen.dart';
+import '../widgets/no_internet_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,11 +23,36 @@ class _LoginScreenState extends State<LoginScreen> {
   bool loading = false;
   bool rememberMe = true;
   bool obscurePassword = true;
+  bool hasConnectionError = false;
 
   @override
   void initState() {
     super.initState();
     loadSavedUser();
+    _checkConnectivity();
+  }
+
+  // Quick probe against our own server, so we know connectivity is
+  // actually good enough to reach the login API — not just that the
+  // device has *some* network. A generic DNS check (e.g. google.com)
+  // could say "online" even if our server is unreachable.
+  Future<void> _checkConnectivity() async {
+    try {
+      await http
+          .get(Uri.parse("https://vyaratiles.co.in/Api/ERPAuth"))
+          .timeout(const Duration(seconds: 5));
+
+      if (!mounted) return;
+      setState(() => hasConnectionError = false);
+    } catch (e) {
+      if (!mounted) return;
+      if (_isConnectionError(e)) {
+        setState(() => hasConnectionError = true);
+      }
+      // Non-connection errors here (e.g. a 4xx/5xx from hitting the
+      // endpoint with no params) are fine — they still prove the
+      // server is reachable, so we don't treat them as offline.
+    }
   }
 
   Future<void> loadSavedUser() async {
@@ -38,8 +67,32 @@ class _LoginScreenState extends State<LoginScreen> {
   });
 }
 
+  // True only for genuine connectivity failures (no network, timeout,
+  // DNS/socket errors) — NOT for wrong-password or other API-level
+  // failures, which arrive as a normal 200 response with a failure
+  // message and never reach this check.
+  bool _isConnectionError(Object e) {
+    return e is SocketException ||
+        e is TimeoutException ||
+        e is HttpException ||
+        e.toString().contains("Failed host lookup") ||
+        e.toString().contains("Connection refused") ||
+        e.toString().contains("Connection timed out") ||
+        e.toString().contains("Network is unreachable");
+  }
+
   Future<void> login() async {
     if (userController.text.isEmpty || passController.text.isEmpty) {
+      if (hasConnectionError) {
+        // We were on the No-Internet screen (likely because the user
+        // never got a chance to type their password before it took
+        // over on first load). Send them back to the login form so
+        // they can actually fill it in, instead of silently staying
+        // put with no visible change.
+        setState(() => hasConnectionError = false);
+      }
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Enter User ID & Password")),
       );
@@ -58,7 +111,11 @@ class _LoginScreenState extends State<LoginScreen> {
         passController.text.trim(),
       );
 
- 
+      LoaderService.hide();
+
+      if (!mounted) return;
+
+      setState(() => hasConnectionError = false);
 
       if (response["StatusCode"] == 200) {
         await SessionManager.saveSession(
@@ -67,6 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
           userData: response,
         );
 
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const DashboardScreen()),
@@ -77,19 +135,49 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    }
-    finally {
-    LoaderService.hide(); // Always hide loader
-  }
+      LoaderService.hide();
 
-    setState(() => loading = false);
+      if (!mounted) return;
+
+      if (_isConnectionError(e)) {
+        setState(() => hasConnectionError = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please turn on your internet")),
+        );
+      } else {
+        // Reaching here means the failure wasn't a connectivity issue
+        // (it's some other error — parsing, server-side, etc.), so
+        // connectivity itself is fine. Make sure we're not stuck on
+        // NoInternetScreen with no way back to the form.
+        if (hasConnectionError) {
+          setState(() => hasConnectionError = false);
+        }
+        debugPrint("LOGIN ERROR: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() => loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (hasConnectionError) {
+      return NoInternetScreen(
+        onRetry: () {
+          // Don't clear hasConnectionError here — only login() should
+          // decide that, based on whether the retry actually succeeds
+          // or fails again (or, if fields are empty, login() routes
+          // back to the form itself so the user can type in).
+          login();
+        },
+      );
+    }
+
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width > 800;
 

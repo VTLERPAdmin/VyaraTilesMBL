@@ -24,10 +24,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String userName = "User";
   List<String> menus = [];
   bool isLoading = true;
+  
   bool get  hasEVPermission => menus.contains("mnuMblEVRead");
   bool get hasPrevMntPermission => menus.contains("mnuPrevMnt");
   String getGreeting() {
-  final hour = DateTime.now().hour;
+  final hour = DateTime.now().hour; 
+  
 
   if (hour >= 5 && hour < 12) {
     return "Good Morning";
@@ -39,6 +41,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return "Good Night";
   }
 }
+
+
+
 
   @override
 void initState() {
