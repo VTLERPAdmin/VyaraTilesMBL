@@ -72,10 +72,39 @@ class _EVDetailScreenState extends State<EVDetailScreen> {
 
   // ================= SUBMIT (UNCHANGED BACKEND) =================
   Future<void> submit() async {
-    if (loading) return;
+  if (loading) return;
 
-    setState(() => loading = true);
+  // Validation
+  if (chargeCtrl.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please enter charge reading."),
+      ),
+    );
+    return;
+  }
 
+  if (meterCtrl.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please enter meter reading."),
+      ),
+    );
+    return;
+  }
+
+  if (imageFile == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please upload at least one photo."),
+      ),
+    );
+    return;
+  }
+
+  setState(() => loading = true);
+
+  
     try {
       final userId = await SessionManager.getUserId();
 
@@ -330,9 +359,7 @@ class _EVDetailScreenState extends State<EVDetailScreen> {
       child: TextField(
         controller: label == "Charge Reading"
             ? chargeCtrl
-            : label == "Meter Reading"
-                ? meterCtrl
-                : notesCtrl,
+            : (label == "Meter Reading" ? meterCtrl : notesCtrl),
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),

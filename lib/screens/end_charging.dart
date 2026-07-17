@@ -35,13 +35,42 @@ class _EndChargeScreenState extends State<EndChargeScreen> {
       });
     }
   }
+Future<void> submit() async {
 
-  Future<void> submit() async {
+  if (chargeCtrl.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please enter charge reading."),
+      ),
+    );
+    return;
+  }
+
+  if (meterCtrl.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please enter meter reading."),
+      ),
+    );
+    return;
+  }
+
+  if (imageFile == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Please upload one photo."),
+      ),
+    );
+    return;
+  }
+
   LoaderService.show(
     context,
     title: "Saving Data",
     subtitle: "Please wait while we submit charging details...",
   );
+
+  
 
   try {
     final userId = await SessionManager.getUserId();
@@ -57,7 +86,7 @@ class _EndChargeScreenState extends State<EndChargeScreen> {
       "EqID": widget.detail.eqId,
       "EndInfo": {
         "ReadDate": DateTime.now().toIso8601String(),
-        "ChargeReading": double.tryParse(chargeCtrl.text) ?? 0,
+        "ChargeReading": double.tryParse(chargeCtrl.text) ,
         "MeterReading": double.tryParse(meterCtrl.text) ?? 0,
         "Notes": notesCtrl.text,
         "Img": imageBase64,
