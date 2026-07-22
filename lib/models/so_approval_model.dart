@@ -18,8 +18,10 @@ class SOApprovalModel {
   final bool lowRate;
   final bool rateChange;
 
-  
   final bool approved;
+  final bool acknowledged;
+  
+  final String preferredApprover;  // Last Approved By
 
   SOApprovalModel({
     required this.locId,
@@ -35,14 +37,18 @@ class SOApprovalModel {
     required this.notes,
     required this.lowRate,
     required this.rateChange,
-    
     required this.approved,
+    required this.acknowledged,
+    required this.preferredApprover,
   });
 
   factory SOApprovalModel.fromJson(Map<String, dynamic> json) {
+    // Debug: Print the actual JSON response to see what fields are available
+    print("🔍 SO APPROVAL JSON => $json");
+    
     return SOApprovalModel(
-      locId: json["LocID"] ?? 0,
-      id: json["SOID"] ?? 0,
+      locId: json["LocID"] ?? json["LocId"] ?? json["locationId"] ?? 0,
+      id: json["SOID"] ?? json["SOId"] ?? json["soId"] ?? 0,
 
       soNo: json["SONo"] ?? "",
       soDate: json["SODate"] ?? "",
@@ -59,10 +65,9 @@ class SOApprovalModel {
 
       lowRate: json["LowRate"] ?? false,
       rateChange: json["RateChange"] ?? false,
-
-      
       approved: json["Approved"] ?? false,
-
+      acknowledged: json["Acknowledged"] ?? false,
+      preferredApprover: json["PreferredApprover"] ?? json["LastApprovedBy"] ?? "",
     );
   }
 }

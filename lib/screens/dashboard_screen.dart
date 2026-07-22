@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:vyara_erp/screens/so_module_screen.dart';
 import 'dart:async';
 import 'dart:io';
 import 'login_screen.dart';
@@ -47,6 +48,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     });
   }
+
 
   // Check connectivity before loading dashboard
   Future<void> _checkConnectivity() async {
@@ -690,6 +694,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "icon": Icons.fact_check,
         "color": const Color(0xFF4F46E5),
       },
+           
     };
 
     final item = map[cleanMenu];
@@ -718,7 +723,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           case "mnuProdSOAppr":
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const SOApprovalScreen()),
+              MaterialPageRoute(builder: (_) => const SOModuleScreen()),
             );
             break;
 
@@ -744,7 +749,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               );
             });
-            break;
+            break;            
 
           default:
             debugPrint("Unknown menu: $cleanMenu");

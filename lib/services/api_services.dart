@@ -7,13 +7,14 @@ import 'package:http/http.dart' as http;
 import '../models/so_status_model.dart';
 import '../models/ledger_model.dart';
 import '../models/so_approval_model.dart';
+import '../models/so_acknowledgement_model.dart';
 import '../models/ev_model.dart';
 import '../models/dispatch_plan_filter_model.dart';
 import '../models/ev_detail_model.dart';
 
 
 class ApiService {
-  static const String baseUrl = "https://vyaratiles.co.in/Api/";
+  static const String baseUrl = "https://vyaratiles.co.in/API/";
 
   // LOGIN
  static Future<Map<String, dynamic>> login(
@@ -435,6 +436,122 @@ static Future<String> approveSO({
     throw Exception(data["Message"] ?? "Approval Failed");
   } catch (e) {
     throw Exception("SO APPROVAL ERROR: $e");
+  }
+}
+
+// =========================
+// SO ACKNOWLEDGE LIST (with new model)
+// =========================
+static Future<List<SOAcknowledgementModel>> getSOAcknowledgementList({
+  required String userId,
+}) async {
+  try {
+    final url = "https://vyaratiles.co.in/API/SOAckList?UserID=$userId";
+
+    print("================================");
+    print("📋 SO ACKNOWLEDGEMENT LIST REQUEST");
+    print("URL => $url");
+    print("UserID => $userId");
+    print("================================");
+
+    final response = await http.get(Uri.parse(url));
+
+    print("SO ACKNOWLEDGEMENT RESPONSE STATUS => ${response.statusCode}");
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data["StatusCode"] == 200) {
+      final List list = data["SOList"] ?? [];
+      print("📊 Total SOs received: ${list.length}");
+      return list.map((e) => SOAcknowledgementModel.fromJson(e)).toList();
+    }
+
+    throw Exception(data["Message"] ?? "Failed to load SO acknowledgement list");
+  } catch (e) {
+    print("❌ SO ACKNOWLEDGEMENT ERROR => $e");
+    throw Exception("SO ACKNOWLEDGEMENT ERROR: $e");
+  }
+}
+
+// =========================
+// =========================
+// SO ACKNOWLEDGE LIST (Legacy - deprecated)
+// =========================
+static Future<List<SOApprovalModel>> getSOAcknowledgeList({
+  required String userId,
+}) async {
+  try {
+    final url = "https://vyaratiles.co.in/API/SOAckList?UserID=$userId";
+
+    print("SO ACKNOWLEDGE URL => $url");
+
+    final response = await http.get(Uri.parse(url));
+
+    print("SO ACKNOWLEDGE RESPONSE => ${response.body}");
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data["StatusCode"] == 200) {
+      final List list = data["SOList"] ?? [];
+      return list.map((e) => SOApprovalModel.fromJson(e)).toList();
+    }
+
+    throw Exception(data["Message"] ?? "Failed to load SO acknowledgement list");
+  } catch (e) {
+    throw Exception("SO ACKNOWLEDGE ERROR: $e");
+  }
+}
+
+// =========================
+// =========================
+// SO ACKNOWLEDGE POST
+// =========================
+static Future<String> acknowledgeSO({
+  required String userId,
+  required int locId,
+  required int soId,
+  required String notes,
+}) async {
+  try {
+    final url = "${baseUrl}SOAck";
+
+    final body = {
+      "UserID": userId,
+      "LocID": locId,
+      "SOID": soId,
+      "Notes": notes,
+    };
+
+    print("================================");
+    print("🚀 SO ACKNOWLEDGE REQUEST");
+    print("URL => $url");
+    print("BODY => ${jsonEncode(body)}");
+    print("Raw Values:");
+    print("  UserID: $userId");
+    print("  LocID: $locId");
+    print("  SOID: $soId");
+    print("  Notes: $notes");
+    print("================================");
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("SO ACKNOWLEDGE RESPONSE => ${response.body}");
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data["StatusCode"] == 200) {
+      return data["Message"] ?? "Acknowledged Successfully";
+    }
+
+    throw Exception(data["Message"] ?? "Acknowledgement Failed");
+  } catch (e) {
+    throw Exception("SO ACKNOWLEDGE ERROR: $e");
   }
 }
 
