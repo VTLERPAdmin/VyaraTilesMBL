@@ -14,6 +14,7 @@ import 'dispatch_plan_screen.dart';
 import '../screens/ev_operations_screen.dart';
 import '../services/session_manager.dart';
 import '../screens/dispatch_plan_report_screen.dart';
+import '../screens/work_order_status_screen.dart';
 import '../PrevMnt/services/PrevMnt_api_services.dart';
 import '../PrevMnt/screens/PrevMntHomeScreen.dart';
 import '../widgets/no_internet_screen.dart';
@@ -655,14 +656,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final Map<String, dynamic> map = {
       "mnuProdDOPlanSOItem": {
-        "title": "Dispatch Planning",
+        "title": "Dispatch Plan",
         "subtitle": "Plan Dispatch",
         "icon": Icons.local_shipping_outlined,
         "color": const Color.fromARGB(255, 236, 240, 32),
       },
       "mnuRptDispatchDispPlans": {
         "title": "Planning Report",
-        "subtitle": "Dispatch Plan Analytics",
+        "subtitle": "Dispatch Report",
         "icon": Icons.analytics_outlined,
         "color": const Color(0xFF0891B2),
       },
@@ -724,6 +725,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SOModuleScreen()),
+            );
+            break;
+
+          case "mnuRptWOStatus":
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const WorkOrderStatusScreen()),
             );
             break;
 

@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../screens/loader_service.dart';
 import '../models/ledger_model.dart';
 import '../services/api_services.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../services/session_manager.dart';
 
 class LedgerScreen extends StatefulWidget {
@@ -142,115 +143,199 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   // ================= CLIENT SELECTOR =================
-  Future<void> openClientSelector() async {
-    List<LedgerClientModel> tempSelected =
-        List.from(selectedClients);
+Future<void> openClientSelector() async {
+  List<LedgerClientModel> tempSelected = List.from(selectedClients);
 
-    final searchController = TextEditingController();
-    List<LedgerClientModel> dialogClients = List.from(filteredClients);
+  final searchController = TextEditingController();
+  List<LedgerClientModel> dialogClients = List.from(filteredClients);
 
-    await showDialog(
-      context: context,
-      builder: (_) {
-        return StatefulBuilder(
-          builder: (context, setDialog) {
-            return AlertDialog(
-              title: const Text("Select Clients"),
-
-              content: SizedBox(
-                width: 400,
-                height: 500,
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: searchController,
-                      decoration: const InputDecoration(
-                        hintText: "Search Client",
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                      onChanged: (value) {
-                        setDialog(() {
-                          dialogClients = filteredClients
-                              .where((e) => e.name
-                                  .toLowerCase()
-                                  .contains(value.toLowerCase()))
-                              .toList();
-                        });
-                      },
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    isScrollControlled: true,
+    useSafeArea: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(20),
+      ),
+    ),
+    builder: (_) {
+      return StatefulBuilder(
+        builder: (context, setDialog) {
+          return SizedBox(
+            height: MediaQuery.of(context).size.height * 0.85,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Drag Handle
+                  Container(
+                    width: 45,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                  ),
 
-                    const SizedBox(height: 10),
+                  const SizedBox(height: 12),
 
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: dialogClients.length,
-                        itemBuilder: (_, index) {
-                          final client = dialogClients[index];
+                  const Text(
+                    "Select Clients",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
 
-                          final selected = tempSelected
-                              .any((e) => e.id == client.id);
+                  const SizedBox(height: 15),
 
-                          return CheckboxListTile(
-                            value: selected,
-                            title: Text(client.name),
-                            onChanged: (v) {
-                              setDialog(() {
-                                if (selected) {
-                                  tempSelected
-                                      .removeWhere((e) => e.id == client.id);
-                                } else {
-                                  tempSelected.add(client);
-                                }
-                              });
-                            },
-                          );
+                  TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: "Search Client",
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                searchController.clear();
+                                setDialog(() {
+                                  dialogClients =
+                                      List.from(filteredClients);
+                                });
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setDialog(() {
+                        dialogClients = filteredClients
+                            .where((e) => e.name
+                                .toLowerCase()
+                                .contains(value.toLowerCase()))
+                            .toList();
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          setDialog(() {
+                            tempSelected =
+                                List.from(filteredClients);
+                          });
                         },
+                        icon: const Icon(Icons.select_all),
+                        label: const Text("Select All"),
                       ),
-                    ),
-                  ],
-                ),
+
+                      const Spacer(),
+
+                      TextButton.icon(
+                        onPressed: () {
+                          setDialog(() {
+                            tempSelected.clear();
+                          });
+                        },
+                        icon: const Icon(Icons.clear_all),
+                        label: const Text("Clear"),
+                      ),
+                    ],
+                  ),
+
+                  const Divider(),
+
+                  Expanded(
+                    child: dialogClients.isEmpty
+                        ? const Center(
+                            child: Text("No clients found"),
+                          )
+                        : ListView.builder(
+                            itemCount: dialogClients.length,
+                            itemBuilder: (_, index) {
+                              final client = dialogClients[index];
+
+                              final selected = tempSelected.any(
+                                (e) => e.id == client.id,
+                              );
+
+                              return CheckboxListTile(
+                                dense: true,
+                                value: selected,
+                                title: Text(client.name),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                onChanged: (_) {
+                                  setDialog(() {
+                                    if (selected) {
+                                      tempSelected.removeWhere(
+                                        (e) =>
+                                            e.id == client.id,
+                                      );
+                                    } else {
+                                      tempSelected.add(client);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: const Text("Cancel"),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color(0xFF06224D),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              selectedClients = tempSelected;
+                            });
+
+                            Navigator.pop(context);
+                          },
+                          child: const Text(
+                            "Done",
+                            style:
+                                TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel"),
-                ),
-
-                TextButton(
-                  onPressed: () {
-                    setDialog(() {
-                      tempSelected = List.from(filteredClients);
-                    });
-                  },
-                  child: const Text("Select All"),
-                ),
-
-                TextButton(
-                  onPressed: () {
-                    setDialog(() {
-                      tempSelected.clear();
-                    });
-                  },
-                  child: const Text("Clear"),
-                ),
-
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      selectedClients = tempSelected;
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: const Text("Done"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 
   // ================= GENERATE REPORT =================
   Future<void> generateReport() async {
@@ -382,46 +467,81 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   // ================= WIDGETS =================
-  Widget buildAcGroup() => buildContainer(
-        DropdownButtonFormField<LedgerDropdownModel>(
-          value: selectedAcGroup,
-          isExpanded: true,
-          decoration: const InputDecoration(
-              labelText: "A/c Group",
-              border: OutlineInputBorder()),
-          items: model!.acGroups
-              .map((e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(e.name),
-                  ))
-              .toList(),
-          onChanged: (v) {
-            setState(() => selectedAcGroup = v);
-            filterClients();
-          },
-        ),
-      );
+ Widget buildAcGroup() => buildContainer(
+      DropdownSearch<LedgerDropdownModel>(
+        selectedItem: selectedAcGroup,
 
-  Widget buildClientGroup() => buildContainer(
-        DropdownButtonFormField<String>(
-          value: selectedClientGroup,
-          isExpanded: true,
-          decoration: const InputDecoration(
-              labelText: "Client Group",
-              border: OutlineInputBorder()),
-          items: model!.clientGroups
-              .map((e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(e),
-                  ))
-              .toList(),
-          onChanged: (v) {
-            setState(() => selectedClientGroup = v);
-            filterClients();
-          },
-        ),
-      );
+        items: (filter, _) => model!.acGroups,
 
+        itemAsString: (item) => item.name,
+
+        compareFn: (a, b) => a.id == b.id,
+
+        onChanged: (v) {
+          setState(() => selectedAcGroup = v);
+          filterClients();
+        },
+
+        decoratorProps: const DropDownDecoratorProps(
+          decoration: InputDecoration(
+            labelText: "A/c Group",
+            border: OutlineInputBorder(),
+          ),
+        ),
+
+        popupProps: const PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: TextFieldProps(
+            decoration: InputDecoration(
+              hintText: "Search A/c Group",
+              prefixIcon: Icon(Icons.search),
+            ),
+          ),
+        ),
+
+        suffixProps: const DropdownSuffixProps(
+          clearButtonProps: ClearButtonProps(
+            isVisible: true,
+          ),
+        ),
+      ),
+    );
+
+Widget buildClientGroup() => buildContainer(
+      DropdownSearch<String>(
+        selectedItem: selectedClientGroup,
+
+        items: (filter, _) => model!.clientGroups,
+
+        onChanged: (v) {
+          setState(() => selectedClientGroup = v);
+          filterClients();
+        },
+
+        decoratorProps: const DropDownDecoratorProps(
+          decoration: InputDecoration(
+            labelText: "Client Group",
+            border: OutlineInputBorder(),
+          ),
+        ),
+
+        popupProps: const PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: TextFieldProps(
+            decoration: InputDecoration(
+              hintText: "Search Client Group",
+              prefixIcon: Icon(Icons.search),
+            ),
+          ),
+        ),
+
+        suffixProps: const DropdownSuffixProps(
+          clearButtonProps: ClearButtonProps(
+            isVisible: true,
+          ),
+        ),
+      ),
+    );
   Widget buildClientSelector() => buildContainer(
         InkWell(
           onTap: openClientSelector,

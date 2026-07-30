@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'package:flutter/services.dart';
 import '../models/ev_detail_model.dart';
 import '../services/api_services.dart';
 import '../services/session_manager.dart';
@@ -92,6 +92,27 @@ class _EVDetailScreenState extends State<EVDetailScreen> {
     );
     return;
   }
+  if (!_isValidNumber(chargeCtrl.text.trim())) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        "Charge Reading should contain numbers only.",
+      ),
+    ),
+  );
+  return;
+}
+
+if (!_isValidNumber(meterCtrl.text.trim())) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        "Meter Reading should contain numbers only.",
+      ),
+    ),
+  );
+  return;
+}
 
   if (imageFile == null) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -353,20 +374,40 @@ class _EVDetailScreenState extends State<EVDetailScreen> {
   }
 
   // ================= FIELD =================
-  Widget _field(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
-        controller: label == "Charge Reading"
-            ? chargeCtrl
-            : (label == "Meter Reading" ? meterCtrl : notesCtrl),
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
+ Widget _field(String label) {
+  final bool isNumeric =
+      label == "Charge Reading" || label == "Meter Reading";
+
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: TextField(
+      controller: label == "Charge Reading"
+          ? chargeCtrl
+          : (label == "Meter Reading" ? meterCtrl : notesCtrl),
+
+      keyboardType: isNumeric
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
+
+      inputFormatters: isNumeric
+          ? [
+              FilteringTextInputFormatter.allow(
+                RegExp(r'^\d*\.?\d{0,2}$'),
+              ),
+            ]
+          : null,
+
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
       ),
-    );
-  }
+    ),
+  );
+}
+
+bool _isValidNumber(String value) {
+  return RegExp(r'^\d+(\.\d+)?$').hasMatch(value.trim());
+}
 
   // ================= CARD STYLE =================
   BoxDecoration _card() {

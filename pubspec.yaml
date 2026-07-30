@@ -40,6 +40,7 @@ dependencies:
   package_info_plus: ^4.0.0
   path_provider: ^2.0.0
   permission_handler: ^11.4.0
+  dropdown_search: ^6.0.1
   
   xml: ^6.5.0
   # The following adds the Cupertino Icons font to your application.
@@ -78,9 +79,10 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/logo_app.png
+  image_path: assets/logo.png
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: assets/logo_app.png
+  adaptive_icon_foreground: assets/logo.png
+  adaptive_icon_foreground_inset: 20
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

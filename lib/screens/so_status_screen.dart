@@ -4,6 +4,7 @@ import '../services/session_manager.dart';
 import '../services/api_services.dart';
 import '../models/so_status_model.dart';
 import '../screens/loader_service.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 class SoStatusScreen extends StatefulWidget {
   const SoStatusScreen({super.key});
@@ -312,155 +313,284 @@ Widget build(BuildContext context) {
     );
   }
 
-  Widget buildDropdown(String title, DropdownItemModel? value,
-      List<DropdownItemModel> items, Function(DropdownItemModel?) onChanged) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<DropdownItemModel>(
-        value: items.contains(value) ? value : null,
-        isExpanded: true,
+
+
+Widget buildDropdown(
+  String title,
+  DropdownItemModel? value,
+  List<DropdownItemModel> items,
+  Function(DropdownItemModel?) onChanged,
+) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: DropdownSearch<DropdownItemModel>(
+      selectedItem: value,
+
+      items: (filter, infiniteScrollProps) => items,
+
+      itemAsString: (item) => item.name,
+
+      compareFn: (a, b) => a.id == b.id,
+
+      onChanged: onChanged,
+
+      decoratorProps: DropDownDecoratorProps(
         decoration: InputDecoration(
           labelText: title,
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        items: items
-            .map((e) =>
-                DropdownMenuItem(value: e, child: Text(e.name)))
-            .toList(),
-        onChanged: onChanged,
       ),
-    );
-  }
 
-  Widget buildStringDropdown(String title, String? value,
-      List<String> items, Function(String?) onChanged) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<String>(
-        value: value,
-        isExpanded: true,
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: "Search...",
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
+      ),
+
+      suffixProps: DropdownSuffixProps(
+        clearButtonProps: ClearButtonProps(
+          isVisible: true,
+        ),
+      ),
+    ),
+  );
+}
+ Widget buildStringDropdown(
+  String title,
+  String? value,
+  List<String> items,
+  Function(String?) onChanged,
+) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: DropdownSearch<String>(
+      selectedItem: value,
+      items: (filter, _) => items,
+      onChanged: onChanged,
+
+      decoratorProps: DropDownDecoratorProps(
         decoration: InputDecoration(
           labelText: title,
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        items: items
-            .map((e) =>
-                DropdownMenuItem(value: e, child: Text(e)))
-            .toList(),
-        onChanged: onChanged,
       ),
-    );
-  }
 
-  Widget buildClientDropdown() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<ClientModel>(
-        value: selectedClient,
-        isExpanded: true,
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: "Search...",
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
+      ),
+
+      suffixProps: const DropdownSuffixProps(
+        clearButtonProps: ClearButtonProps(isVisible: true),
+      ),
+    ),
+  );
+}
+ Widget buildClientDropdown() {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: DropdownSearch<ClientModel>(
+      selectedItem: selectedClient,
+
+      items: (filter, _) => model!.clients,
+
+      itemAsString: (item) => item.name,
+
+      compareFn: (a, b) => a.id == b.id,
+
+      onChanged: (v) {
+        setState(() {
+          selectedClient = v;
+          selectedSite = null;
+        });
+      },
+
+      decoratorProps: DropDownDecoratorProps(
         decoration: InputDecoration(
           labelText: "Client",
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        items: model!.clients
-            .map((e) =>
-                DropdownMenuItem(value: e, child: Text(e.name)))
-            .toList(),
-        onChanged: (v) {
-          setState(() {
-            selectedClient = v;
-            selectedSite = null;
-          });
-        },
       ),
-    );
-  }
 
-  Widget buildSiteDropdown() {
-    final sites = selectedClient?.sites ?? [];
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: "Search Client...",
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
+      ),
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<SiteModel>(
-        value: selectedSite,
-        isExpanded: true,
+      suffixProps: const DropdownSuffixProps(
+        clearButtonProps: ClearButtonProps(isVisible: true),
+      ),
+    ),
+  );
+}
+
+ Widget buildSiteDropdown() {
+  final sites = selectedClient?.sites ?? [];
+
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: DropdownSearch<SiteModel>(
+      selectedItem: selectedSite,
+
+      items: (filter, _) => sites,
+
+      itemAsString: (item) => item.siteName,
+
+      compareFn: (a, b) => a.siteId == b.siteId,
+
+      onChanged: (v) {
+        setState(() {
+          selectedSite = v;
+        });
+      },
+
+      decoratorProps: DropDownDecoratorProps(
         decoration: InputDecoration(
           labelText: "Site",
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        items: sites
-            .map((e) =>
-                DropdownMenuItem(value: e, child: Text(e.siteName)))
-            .toList(),
-        onChanged: (v) {
-          setState(() => selectedSite = v);
-        },
       ),
-    );
-  }
+
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: "Search Site...",
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
+      ),
+
+      suffixProps: const DropdownSuffixProps(
+        clearButtonProps: ClearButtonProps(isVisible: true),
+      ),
+    ),
+  );
+}
 
   Widget buildProductGroupDropdown() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<ProductGroupModel>(
-        value: selectedProductGroup,
-        isExpanded: true,
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: DropdownSearch<ProductGroupModel>(
+      selectedItem: selectedProductGroup,
+
+      items: (filter, _) => model!.productGroups,
+
+      itemAsString: (item) => item.productGroup,
+
+      compareFn: (a, b) => a.id == b.id,
+
+      onChanged: (v) {
+        setState(() {
+          selectedProductGroup = v;
+          selectedProduct = null;
+        });
+      },
+
+      decoratorProps: DropDownDecoratorProps(
         decoration: InputDecoration(
           labelText: "Product Group",
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        items: model!.productGroups
-            .map((e) => DropdownMenuItem(
-                value: e, child: Text(e.productGroup)))
-            .toList(),
-        onChanged: (v) {
-          setState(() {
-            selectedProductGroup = v;
-            selectedProduct = null;
-          });
-        },
       ),
-    );
-  }
+
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: "Search Product Group...",
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
+      ),
+
+      suffixProps: const DropdownSuffixProps(
+        clearButtonProps: ClearButtonProps(isVisible: true),
+      ),
+    ),
+  );
+}
 
   Widget buildProductDropdown() {
-    final products = selectedProductGroup?.products ?? [];
+  final products = selectedProductGroup?.products ?? [];
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<ProductModel>(
-        value: selectedProduct,
-        isExpanded: true,
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: DropdownSearch<ProductModel>(
+      selectedItem: selectedProduct,
+
+      items: (filter, _) => products,
+
+      itemAsString: (item) => item.productName,
+
+      compareFn: (a, b) => a.id == b.id,
+
+      onChanged: (v) {
+        setState(() {
+          selectedProduct = v;
+        });
+      },
+
+      decoratorProps: DropDownDecoratorProps(
         decoration: InputDecoration(
           labelText: "Product",
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10)),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
-        items: products
-            .map((e) =>
-                DropdownMenuItem(value: e, child: Text(e.productName)))
-            .toList(),
-        onChanged: (v) {
-          setState(() => selectedProduct = v);
-        },
       ),
-    );
-  }
+
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: "Search Product...",
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
+      ),
+
+      suffixProps: const DropdownSuffixProps(
+        clearButtonProps: ClearButtonProps(isVisible: true),
+      ),
+    ),
+  );
+}
 }

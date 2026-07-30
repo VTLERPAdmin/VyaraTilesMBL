@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/so_status_model.dart';
+import '../models/work_order_status_model.dart';
 import '../models/ledger_model.dart';
 import '../models/so_approval_model.dart';
 import '../models/so_acknowledgement_model.dart';
@@ -552,6 +553,140 @@ static Future<String> acknowledgeSO({
     throw Exception(data["Message"] ?? "Acknowledgement Failed");
   } catch (e) {
     throw Exception("SO ACKNOWLEDGE ERROR: $e");
+  }
+}
+
+// =========================
+// WORK ORDER FILTERS
+// =========================
+static Future<WorkOrderStatusModel> getWOFilters(
+  String userId,
+  String token,
+) async {
+  try {
+    final url =
+        "${baseUrl}WOStatusFilter?UserID=${Uri.encodeComponent(userId)}&Token=$token";
+
+    print("================================");
+    print("WO FILTER API");
+    print("URL => $url");
+
+    final response = await http.get(
+      Uri.parse(url),
+    );
+
+    print("STATUS CODE => ${response.statusCode}");
+    print("RESPONSE =>");
+    print(response.body);
+    print("================================");
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      return WorkOrderStatusModel.fromJson(data);
+    } else {
+      throw Exception(
+        "HTTP ${response.statusCode}\n${response.body}",
+      );
+    }
+  } catch (e) {
+    print("WO FILTER ERROR => $e");
+    throw Exception(
+      "WO FILTER ERROR : $e",
+    );
+  }
+}
+
+// =========================
+static Future<List<WorkOrderStatusModel>> getWorkOrderList({
+  required String userId,
+}) async {
+  try {
+    final url = "https://vyaratiles.co.in/API/WOStatusFilter?UserID=$userId";
+
+    print("================================");
+    print("📦 WORK ORDER LIST REQUEST");
+    print("URL => $url");
+    print("UserID => $userId");
+    print("================================");
+
+    final response = await http.get(Uri.parse(url));
+
+    print("WORK ORDER RESPONSE STATUS => ${response.statusCode}");
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data["StatusCode"] == 200) {
+      final List list = data["WOList"] ?? data["SOList"] ?? [];
+      print("📊 Total Work Orders received: ${list.length}");
+      return list.map((e) => WorkOrderStatusModel.fromJson(e)).toList();
+    }
+
+    throw Exception(data["Message"] ?? "Failed to load work order list");
+  } catch (e) {
+    print("❌ WORK ORDER ERROR => $e");
+    throw Exception("WORK ORDER ERROR: $e");
+  }
+}
+
+// =========================
+// WORK ORDER REPORT
+// =========================
+static Future<String> getWorkOrderReport({
+  required String userId,
+  required String token,
+  required Map<String, dynamic> body,
+  required String reportType,
+}) async {
+  print("🔵 WORK ORDER REPORT REQUEST");
+  print("USERID: $userId");
+  print("REPORT TYPE: $reportType");
+  print("BODY: $body");
+
+  try {
+    final url = "${baseUrl}WOStatus";
+
+    // ADD USER INTO BODY
+    body["UserID"] = userId;
+    body["Token"] = token;
+
+    print("================================");
+    print("WORK ORDER REPORT API");
+    print("URL => $url");
+    print("BODY =>");
+    print(jsonEncode(body));
+    print("================================");
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("STATUS CODE => ${response.statusCode}");
+    print("RESPONSE =>");
+    print(response.body);
+    print("================================");
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data["StatusCode"] == 200) {
+      return data["Message"] ?? "";
+    } else {
+      final message = (data["Message"] ?? "").toString();
+
+      if (message.contains("No data to display report")) {
+        throw Exception("No Record Found");
+      }
+
+      throw Exception(
+        message.isEmpty ? "Unknown Error" : message,
+      );
+    }
+  } catch (e) {
+    print("❌ WORK ORDER REPORT ERROR => $e");
+    throw Exception(e.toString());
   }
 }
 

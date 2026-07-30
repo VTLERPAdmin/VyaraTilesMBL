@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/ev_detail_model.dart';
 import '../services/api_services.dart';
+import 'package:flutter/services.dart';
 import '../services/session_manager.dart';
 import '../screens/loader_service.dart';
 
@@ -55,6 +56,24 @@ Future<void> submit() async {
     return;
   }
 
+  if (!_isValidNumber(chargeCtrl.text.trim())) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("Charge Reading should contain numbers only."),
+    ),
+  );
+  return;
+}
+
+if (!_isValidNumber(meterCtrl.text.trim())) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("Meter Reading should contain numbers only."),
+    ),
+  );
+  return;
+}
+
   if (imageFile == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -86,7 +105,7 @@ Future<void> submit() async {
       "EqID": widget.detail.eqId,
       "EndInfo": {
         "ReadDate": DateTime.now().toIso8601String(),
-        "ChargeReading": double.tryParse(chargeCtrl.text) ,
+        "ChargeReading": double.tryParse(chargeCtrl.text) ?? 0,
         "MeterReading": double.tryParse(meterCtrl.text) ?? 0,
         "Notes": notesCtrl.text,
         "Img": imageBase64,
@@ -106,6 +125,9 @@ Future<void> submit() async {
     LoaderService.hide();
   }
 }
+bool _isValidNumber(String value) {
+  return RegExp(r'^\d+(\.\d+)?$').hasMatch(value.trim());
+}
 
   @override
   Widget build(BuildContext context) {
@@ -118,8 +140,30 @@ Future<void> submit() async {
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            TextField(controller: chargeCtrl, decoration: const InputDecoration(labelText: "Charge")),
-            TextField(controller: meterCtrl, decoration: const InputDecoration(labelText: "Meter")),
+            TextField(
+  controller: chargeCtrl,
+  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  inputFormatters: [
+    FilteringTextInputFormatter.allow(
+      RegExp(r'^\d*\.?\d*$'),
+    ),
+  ],
+  decoration: const InputDecoration(
+    labelText: "Charge",
+  ),
+),
+         TextField(
+  controller: meterCtrl,
+  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  inputFormatters: [
+    FilteringTextInputFormatter.allow(
+      RegExp(r'^\d*\.?\d*$'),
+    ),
+  ],
+  decoration: const InputDecoration(
+    labelText: "Meter",
+  ),
+),
             TextField(controller: notesCtrl, decoration: const InputDecoration(labelText: "Notes")),
 
             const SizedBox(height: 10),
