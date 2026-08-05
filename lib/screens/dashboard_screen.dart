@@ -8,6 +8,7 @@ import 'dart:io';
 import 'login_screen.dart';
 import '../screens/loader_service.dart';
 import '../screens/so_approval_screen.dart';
+import '../screens/product_screen.dart';
 import 'sales_order_screen.dart';
 import '../screens/ledger_screen.dart';
 import 'dispatch_plan_screen.dart';
@@ -317,6 +318,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "mnuRptSOStatus": true,
       "mnuRptWOStatus": true,
       "mnuProdSOAppr": true,
+      "mnuProdMastProdInfo": true
     };
 
     final visibleMenus = menus
@@ -325,9 +327,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 
     int crossAxisCount = 2;
-    if (width > 1200) crossAxisCount = 5;
-    else if (width > 900) crossAxisCount = 4;
-    else if (width > 700) crossAxisCount = 3;
+    if (width > 1200) {
+      crossAxisCount = 5;
+    } else if (width > 900) {
+      crossAxisCount = 4;
+    } else if (width > 700) {
+      crossAxisCount = 3;
+    } else if (width < 340) {
+      // Very narrow screens (Galaxy Z Flip cover screen, folded state, etc.)
+      // give each card the full width instead of squeezing 2 into a tiny row.
+      crossAxisCount = 1;
+    }
+
+    // Cell width per card determines how much the title has to wrap.
+    // Narrower cards need a taller cell to fit a 2-line title + subtitle.
+    final cardWidth =
+        (width - 30 - (crossAxisCount - 1) * 14) / crossAxisCount;
+    final cardHeight = cardWidth < 140 ? 172.0 : 145.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FF),
@@ -486,7 +502,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisCount: crossAxisCount,
                           crossAxisSpacing: 14,
                           mainAxisSpacing: 14,
-                          mainAxisExtent: 145,
+                          mainAxisExtent: cardHeight,
                         ),
                     itemBuilder: (context, index) {
                       return _buildCard(context, visibleMenus[index]);
@@ -676,8 +692,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
 
       "mnuRptSOStatus": {
-        "title": "SO Status Report",
-        "subtitle": "Sales Order Tracking",
+        "title": "SO Status ",
+        "subtitle": "SO Tracking",
         "icon": Icons.receipt_long,
         "color": const Color(0xFFF59E0B),
       },
@@ -694,6 +710,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "subtitle": "Pending Approval",
         "icon": Icons.fact_check,
         "color": const Color(0xFF4F46E5),
+      },
+
+      "mnuProdMastProdInfo": {
+        "title": "Product Info",
+        "subtitle": "Product Master",
+        "icon": Icons.inventory_2_outlined,
+        "color": const Color(0xFF10B981),
       },
            
     };
@@ -747,6 +770,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             });
             break;
 
+             case "mnuProdMastProdInfo":
+            SessionManager.getUserId().then((userId) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProductScreen (userId: userId),
+                ),
+              );
+            });
+            break;
+
+
           case "mnuRptDispatchDispPlans":
             SessionManager.getUserId().then((userId) {
               Navigator.push(
@@ -780,6 +815,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
 
               Container(
@@ -800,6 +836,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               Text(
                 item["title"],
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.black87,
                   fontSize: 15,
@@ -811,6 +849,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               Text(
                 item["subtitle"],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 12,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/session_manager.dart';
 import '../services/api_services.dart';
@@ -422,71 +423,102 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
     print("🔍 DROPDOWN $title => Items: ${items.length}, Value: ${value?.name}");
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<DropdownItemModel>(
-        value: value,
-        isExpanded: true,
-        decoration: InputDecoration(
-          labelText: title,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          suffixIcon: value != null
-              ? InkWell(
-                  onTap: onClear,
-                  child: const Icon(Icons.close, size: 18),
-                )
-              : null,
+      child: DropdownSearch<DropdownItemModel>(
+        selectedItem: value,
+        enabled: items.isNotEmpty,
+
+        items: (filter, _) => items,
+
+        itemAsString: (e) => e.name,
+
+        compareFn: (a, b) => a.id == b.id,
+
+        onChanged: (v) => v == null ? onClear() : onChanged(v),
+
+        decoratorProps: DropDownDecoratorProps(
+          decoration: InputDecoration(
+            labelText: title,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
         ),
-        items: items.isEmpty
-            ? [
-                DropdownMenuItem(
-                  child: Text("No ${title.toLowerCase()} available"),
-                )
-              ]
-            : items
-                .map((e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(e.name, overflow: TextOverflow.ellipsis)))
-                .toList(),
-        onChanged: items.isNotEmpty ? onChanged : null,
+
+        popupProps: PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: TextFieldProps(
+            decoration: InputDecoration(
+              hintText: "Search $title",
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          emptyBuilder: (context, searchEntry) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text("No ${title.toLowerCase()} available"),
+            ),
+          ),
+        ),
+
+        suffixProps: const DropdownSuffixProps(
+          clearButtonProps: ClearButtonProps(isVisible: true),
+        ),
       ),
     );
   }
 
   Widget buildProductGroupDropdown() {
     print("🔍 PRODUCT GROUP DROPDOWN => Items: ${model!.productGroups.length}, Value: ${selectedProductGroup?.name}");
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<ProductGroupModel>(
-        value: selectedProductGroup,
-        isExpanded: true,
-        decoration: InputDecoration(
-          labelText: "Group",
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          suffixIcon: selectedProductGroup != null
-              ? InkWell(
-                  onTap: () => setState(() => selectedProductGroup = null),
-                  child: const Icon(Icons.close, size: 18),
-                )
-              : null,
+      child: DropdownSearch<ProductGroupModel>(
+        selectedItem: selectedProductGroup,
+        enabled: model!.productGroups.isNotEmpty,
+        
+
+        items: (filter, _) => model!.productGroups,
+
+        itemAsString: (e) => e.name,
+
+        compareFn: (a, b) => a.id == b.id,
+
+        onChanged: (v) => setState(() => selectedProductGroup = v),
+
+        decoratorProps: DropDownDecoratorProps(
+          decoration: InputDecoration(
+            labelText: "Group",
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
         ),
-        items: model!.productGroups.isEmpty
-            ? [
-                const DropdownMenuItem(
-                  child: Text("No groups available"),
-                )
-              ]
-            : model!.productGroups
-                .map((e) => DropdownMenuItem(
-                    value: e, child: Text(e.name, overflow: TextOverflow.ellipsis)))
-                .toList(),
-        onChanged: model!.productGroups.isNotEmpty
-            ? (v) => setState(() => selectedProductGroup = v)
-            : null,
+
+        popupProps: PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: TextFieldProps(
+            decoration: InputDecoration(
+              
+              hintText: "Search Group",
+              prefixIcon: const Icon(Icons.search),
+              
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          emptyBuilder: (context, searchEntry) => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text("No groups available"),
+            ),
+          ),
+        ),
+
+        suffixProps: const DropdownSuffixProps(
+          clearButtonProps: ClearButtonProps(isVisible: true),
+        ),
       ),
     );
   }
@@ -495,35 +527,48 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
     print("🔍 PRODUCT DROPDOWN => Items: ${model!.products.length}, Value: ${selectedProduct?.name}");
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<ProductModel>(
-        value: selectedProduct,
-        isExpanded: true,
-        decoration: InputDecoration(
-          labelText: "Product",
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          suffixIcon: selectedProduct != null
-              ? InkWell(
-                  onTap: () => setState(() => selectedProduct = null),
-                  child: const Icon(Icons.close, size: 18),
-                )
-              : null,
+      child: DropdownSearch<ProductModel>(
+        selectedItem: selectedProduct,
+        enabled: model!.products.isNotEmpty,
+
+        items: (filter, _) => model!.products,
+
+        itemAsString: (e) => e.name,
+
+        compareFn: (a, b) => a.id == b.id,
+
+        onChanged: (v) => setState(() => selectedProduct = v),
+
+        decoratorProps: DropDownDecoratorProps(
+          decoration: InputDecoration(
+            labelText: "Product",
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
         ),
-        items: model!.products.isEmpty
-            ? [
-                const DropdownMenuItem(
-                  child: Text("No products available"),
-                )
-              ]
-            : model!.products
-                .map((e) => DropdownMenuItem(
-                    value: e, child: Text(e.name, overflow: TextOverflow.ellipsis)))
-                .toList(),
-        onChanged: model!.products.isNotEmpty
-            ? (v) => setState(() => selectedProduct = v)
-            : null,
+
+        popupProps: PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: TextFieldProps(
+            decoration: InputDecoration(
+              hintText: "Search Product",
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          emptyBuilder: (context, searchEntry) => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text("No products available"),
+            ),
+          ),
+        ),
+
+        suffixProps: const DropdownSuffixProps(
+          clearButtonProps: ClearButtonProps(isVisible: true),
+        ),
       ),
     );
   }
@@ -532,66 +577,63 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
     print("🔍 CLIENT DROPDOWN => Items: ${model!.clients.length}, Value: ${selectedClient?.name}");
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: DropdownButtonFormField<ClientModel>(
-        value: selectedClient,
-        isExpanded: true,
-        decoration: InputDecoration(
-          labelText: "Client",
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          suffixIcon: selectedClient != null
-              ? InkWell(
-                  onTap: () {
-                    setState(() {
-                      selectedClient = null;
-                      selectedSite = null;
-                    });
-                  },
-                  child: const Icon(Icons.close, size: 18),
-                )
-              : null,
+      child: DropdownSearch<ClientModel>(
+        selectedItem: selectedClient,
+        enabled: model!.clients.isNotEmpty,
+
+        items: (filter, _) => model!.clients,
+
+        itemAsString: (e) => e.name,
+
+        compareFn: (a, b) => a.id == b.id,
+
+        onChanged: (v) {
+          setState(() {
+            selectedClient = v;
+            selectedSite = null;
+
+            if (v != null) {
+              final matchedSites = model!.sites
+                  .where((site) => site.code == v.id.toString())
+                  .toList();
+
+              if (matchedSites.length == 1) {
+                selectedSite = matchedSites.first;
+              }
+            }
+          });
+        },
+
+        decoratorProps: DropDownDecoratorProps(
+          decoration: InputDecoration(
+            labelText: "Client",
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
         ),
-        items: model!.clients.isEmpty
-            ? [
-                const DropdownMenuItem(
-                  child: Text("No clients available"),
-                )
-              ]
-            : model!.clients
-                .map((e) => DropdownMenuItem(
-                    value: e, child: Text(e.name, overflow: TextOverflow.ellipsis)))
-                .toList(),
-       onChanged: model!.clients.isNotEmpty
-    ? (v) {
 
-        setState(() {
+        popupProps: PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: TextFieldProps(
+            decoration: InputDecoration(
+              hintText: "Search Client",
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          emptyBuilder: (context, searchEntry) => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text("No clients available"),
+            ),
+          ),
+        ),
 
-          selectedClient = v;
-
-          selectedSite = null;
-
-
-          final matchedSites = model!.sites
-              .where(
-                (site) =>
-                site.code == v!.id.toString()
-              )
-              .toList();
-
-
-          if(matchedSites.length == 1){
-
-            selectedSite = matchedSites.first;
-
-          }
-
-        });
-
-      }
-    : null,
-            
+        suffixProps: const DropdownSuffixProps(
+          clearButtonProps: ClearButtonProps(isVisible: true),
+        ),
       ),
     );
   }
@@ -604,89 +646,50 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
     "🔍 SITE DROPDOWN => Items: ${sites.length}, Value: ${selectedSite?.name}"
   );
 
-
   return Padding(
     padding: const EdgeInsets.only(bottom: 10),
-    child: DropdownButtonFormField<SiteModel>(
+    child: DropdownSearch<SiteModel>(
+      selectedItem: selectedSite,
+      enabled: sites.isNotEmpty,
 
-      value: selectedSite,
+      items: (filter, _) => sites,
 
-      isExpanded: true,
+      itemAsString: (e) => e.name,
 
-      decoration: InputDecoration(
-        labelText: "Site",
-        filled: true,
-        fillColor: Colors.white,
+      compareFn: (a, b) => a.siteId == b.siteId,
 
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+      onChanged: (v) => setState(() => selectedSite = v),
+
+      decoratorProps: DropDownDecoratorProps(
+        decoration: InputDecoration(
+          labelText: "Site",
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         ),
-
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
-        ),
-
-        suffixIcon: selectedSite != null
-            ? InkWell(
-                onTap: () {
-                  setState(() {
-                    selectedSite = null;
-                  });
-                },
-                child: const Icon(
-                  Icons.close,
-                  size: 18,
-                ),
-              )
-            : null,
       ),
 
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: TextFieldProps(
+          decoration: InputDecoration(
+            hintText: "Search Site",
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+        emptyBuilder: (context, searchEntry) => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Text("No sites available"),
+          ),
+        ),
+      ),
 
-      items: sites.isEmpty
-
-          ? [
-              const DropdownMenuItem(
-                value: null,
-                child: Text(
-                  "No sites available",
-                ),
-              )
-            ]
-
-
-          : sites.map((e) {
-
-              return DropdownMenuItem<SiteModel>(
-
-                value: e,
-
-                child: Text(
-                  e.name,
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-              );
-
-            }).toList(),
-
-
-
-      onChanged: sites.isNotEmpty
-
-          ? (v) {
-
-              setState(() {
-
-                selectedSite = v;
-
-              });
-
-            }
-
-          : null,
-
-
+      suffixProps: const DropdownSuffixProps(
+        clearButtonProps: ClearButtonProps(isVisible: true),
+      ),
     ),
   );
 }

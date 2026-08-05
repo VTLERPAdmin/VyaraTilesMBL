@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
@@ -89,6 +90,60 @@ int? selectedSite;
   }
 
   bool isGenerating = false;
+
+  // ================= DROPDOWN HELPERS =================
+
+  List<dynamic> get _filteredClients {
+    if (model == null) return [];
+    return model!.clients
+        .where((client) =>
+            selectedClientGroup == null ||
+            client.clientGroup == selectedClientGroup)
+        .toList();
+  }
+
+  List<dynamic> get _availableSites {
+    if (model == null || selectedClient == null) return [];
+    try {
+      final client =
+          model!.clients.firstWhere((c) => c.id == selectedClient);
+      return client.sites;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  String _factoryName(int id) {
+    try {
+      return model!.factories.firstWhere((e) => e.id == id).name;
+    } catch (_) {
+      return id.toString();
+    }
+  }
+
+  String _mktPersonName(int id) {
+    try {
+      return model!.mktPersons.firstWhere((e) => e.id == id).name;
+    } catch (_) {
+      return id.toString();
+    }
+  }
+
+  String _clientName(int id) {
+    try {
+      return model!.clients.firstWhere((e) => e.id == id).name;
+    } catch (_) {
+      return id.toString();
+    }
+  }
+
+  String _siteName(int id) {
+    try {
+      return _availableSites.firstWhere((e) => e.siteId == id).siteName;
+    } catch (_) {
+      return id.toString();
+    }
+  }
 
   Future<void> generateReport() async {
     if (isGenerating) return;
@@ -226,26 +281,46 @@ int? selectedSite;
             ),
             const SizedBox(height: 12),
 
-            DropdownButtonFormField<int>(
-              value: selectedFactory,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: "Factory",
-                border: OutlineInputBorder(),
-                 filled: true,
-                fillColor: Colors.white,
-                isDense: true,
+            DropdownSearch<int>(
+              selectedItem: selectedFactory,
+              enabled: model?.factories.isNotEmpty ?? false,
+
+              items: (filter, _) =>
+                  model?.factories.map<int>((e) => e.id as int).toList() ?? [],
+
+              itemAsString: _factoryName,
+
+              decoratorProps: const DropDownDecoratorProps(
+                decoration: InputDecoration(
+                  labelText: "Factory",
+                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  isDense: true,
+                ),
               ),
-              items: model?.factories.map((e) {
-                    return DropdownMenuItem<int>(
-                      value: e.id,
-                      child: Text(
-                        e.name,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }).toList() ??
-                  [],
+
+              popupProps: PopupProps.menu(
+                showSearchBox: true,
+                searchFieldProps: const TextFieldProps(
+                  decoration: InputDecoration(
+                    hintText: "Search Factory",
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                emptyBuilder: (context, searchEntry) => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text("No factories available"),
+                  ),
+                ),
+              ),
+
+              suffixProps: const DropdownSuffixProps(
+                clearButtonProps: ClearButtonProps(isVisible: true),
+              ),
+
               onChanged: (value) {
                 setState(() {
                   selectedFactory = value;
@@ -255,26 +330,46 @@ int? selectedSite;
 
             const SizedBox(height: 12),
 
-            DropdownButtonFormField<int>(
-              value: selectedMktPerson,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: "Marketing Person",
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.white,
-                isDense: true,
+            DropdownSearch<int>(
+              selectedItem: selectedMktPerson,
+              enabled: model?.mktPersons.isNotEmpty ?? false,
+
+              items: (filter, _) =>
+                  model?.mktPersons.map<int>((e) => e.id as int).toList() ?? [],
+
+              itemAsString: _mktPersonName,
+
+              decoratorProps: const DropDownDecoratorProps(
+                decoration: InputDecoration(
+                  labelText: "Marketing Person",
+                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  isDense: true,
+                ),
               ),
-              items: model?.mktPersons.map((e) {
-                    return DropdownMenuItem<int>(
-                      value: e.id,
-                      child: Text(
-                        e.name,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }).toList() ??
-                  [],
+
+              popupProps: PopupProps.menu(
+                showSearchBox: true,
+                searchFieldProps: const TextFieldProps(
+                  decoration: InputDecoration(
+                    hintText: "Search Marketing Person",
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                emptyBuilder: (context, searchEntry) => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text("No marketing persons available"),
+                  ),
+                ),
+              ),
+
+              suffixProps: const DropdownSuffixProps(
+                clearButtonProps: ClearButtonProps(isVisible: true),
+              ),
+
               onChanged: (value) {
                 setState(() {
                   selectedMktPerson = value;
@@ -284,26 +379,43 @@ int? selectedSite;
 
             const SizedBox(height: 12),
 
-          DropdownButtonFormField<String>(
-            value: selectedClientGroup,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: "Client Group",
-              border: OutlineInputBorder(),
-              filled: true,
-              fillColor: Colors.white,
-              isDense: true,
+          DropdownSearch<String>(
+            selectedItem: selectedClientGroup,
+            enabled: model?.clientGroups.isNotEmpty ?? false,
+
+            items: (filter, _) => model?.clientGroups ?? [],
+
+            decoratorProps: const DropDownDecoratorProps(
+              decoration: InputDecoration(
+                labelText: "Client Group",
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.white,
+                isDense: true,
+              ),
             ),
-            items: model?.clientGroups.map((e) {
-                  return DropdownMenuItem<String>(
-                    value: e,
-                    child: Text(
-                      e,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                }).toList() ??
-                [],
+
+            popupProps: PopupProps.menu(
+              showSearchBox: true,
+              searchFieldProps: const TextFieldProps(
+                decoration: InputDecoration(
+                  hintText: "Search Client Group",
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              emptyBuilder: (context, searchEntry) => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text("No client groups available"),
+                ),
+              ),
+            ),
+
+            suffixProps: const DropdownSuffixProps(
+              clearButtonProps: ClearButtonProps(isVisible: true),
+            ),
+
             onChanged: (value) {
               setState(() {
                 selectedClientGroup = value;
@@ -316,32 +428,45 @@ int? selectedSite;
 
           const SizedBox(height: 12),
 
-            DropdownButtonFormField<int>(
-              value: selectedClient,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: "Client",
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.white,
-                isDense: true,
+            DropdownSearch<int>(
+              selectedItem: selectedClient,
+              enabled: _filteredClients.isNotEmpty,
+
+              items: (filter, _) =>
+                  _filteredClients.map<int>((e) => e.id as int).toList(),
+
+              itemAsString: _clientName,
+
+              decoratorProps: const DropDownDecoratorProps(
+                decoration: InputDecoration(
+                  labelText: "Client",
+                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white,
+                  isDense: true,
+                ),
               ),
 
-              items: model?.clients
-                  .where((client) =>
-                      selectedClientGroup == null ||
-                      client.clientGroup == selectedClientGroup)
-                  .map((e) {
+              popupProps: PopupProps.menu(
+                showSearchBox: true,
+                searchFieldProps: const TextFieldProps(
+                  decoration: InputDecoration(
+                    hintText: "Search Client",
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                emptyBuilder: (context, searchEntry) => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text("No clients available"),
+                  ),
+                ),
+              ),
 
-                    return DropdownMenuItem<int>(
-                      value: e.id,
-                      child: Text(
-                        e.name,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-
-                  }).toList() ?? [],
+              suffixProps: const DropdownSuffixProps(
+                clearButtonProps: ClearButtonProps(isVisible: true),
+              ),
 
               onChanged: (value) {
 
@@ -357,35 +482,45 @@ int? selectedSite;
 
             const SizedBox(height: 12),
 
-DropdownButtonFormField<int>(
-  value: selectedSite,
-  isExpanded: true,
-  decoration: const InputDecoration(
-    labelText: "Site",
-    border: OutlineInputBorder(),
-    filled: true,
-    fillColor: Colors.white,
-    isDense: true,
+DropdownSearch<int>(
+  selectedItem: selectedSite,
+  enabled: _availableSites.isNotEmpty,
+
+  items: (filter, _) =>
+      _availableSites.map<int>((e) => e.siteId as int).toList(),
+
+  itemAsString: _siteName,
+
+  decoratorProps: const DropDownDecoratorProps(
+    decoration: InputDecoration(
+      labelText: "Site",
+      border: OutlineInputBorder(),
+      filled: true,
+      fillColor: Colors.white,
+      isDense: true,
+    ),
   ),
 
-  items: model?.clients
-      .firstWhere(
-        (client) => client.id == selectedClient,
-        orElse: () => model!.clients.first,
-      )
-      .sites
-      .map((site) {
+  popupProps: PopupProps.menu(
+    showSearchBox: true,
+    searchFieldProps: const TextFieldProps(
+      decoration: InputDecoration(
+        hintText: "Search Site",
+        prefixIcon: Icon(Icons.search),
+        border: OutlineInputBorder(),
+      ),
+    ),
+    emptyBuilder: (context, searchEntry) => const Center(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Text("No sites available"),
+      ),
+    ),
+  ),
 
-        return DropdownMenuItem<int>(
-          value: site.siteId,
-          child: Text(
-            site.siteName,
-            overflow: TextOverflow.ellipsis,
-          ),
-        );
-
-      }).toList() ?? [],
-
+  suffixProps: const DropdownSuffixProps(
+    clearButtonProps: ClearButtonProps(isVisible: true),
+  ),
 
   onChanged: (value){
 

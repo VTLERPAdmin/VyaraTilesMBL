@@ -4,14 +4,15 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/so_status_model.dart';
-import '../models/work_order_status_model.dart';
+import '../models/so_status_model.dart' hide ProductModel;
+import '../models/work_order_status_model.dart' hide ProductModel;
 import '../models/ledger_model.dart';
 import '../models/so_approval_model.dart';
 import '../models/so_acknowledgement_model.dart';
 import '../models/ev_model.dart';
-import '../models/dispatch_plan_filter_model.dart';
+import '../models/dispatch_plan_filter_model.dart' hide ProductModel;
 import '../models/ev_detail_model.dart';
+import '../models/product_model.dart';
 
 
 class ApiService {
@@ -939,6 +940,56 @@ static Future<List<DispatchPlanRowModel>> getDispatchPlanListDynamic(
 
     return response.statusCode == 200;
   }
+
+
+
+//================== PRODUCTS  List ==================
+// =========================
+// PRODUCTS LIST
+// =========================
+
+static Future<List<ProductModel>> getProducts(
+  String userId,
+) async {
+  try {
+    final url =
+        "${baseUrl}Products?UserID=${Uri.encodeComponent(userId)}";
+    print("==============================");
+    print("PRODUCT API");
+    print("URL => $url");
+    final response = await http.get(
+      Uri.parse(url),
+    );
+    print("STATUS => ${response.statusCode}");
+    print("RESPONSE => ${response.body}");
+    print("==============================");
+    if (response.statusCode == 200) {
+      final Map<String,dynamic> data =
+          jsonDecode(response.body);
+      final List list =
+          data["ProductList"] ?? [];
+      print(
+        "TOTAL PRODUCTS => ${list.length}",
+      );
+      return list
+          .map(
+            (e)=>ProductModel.fromJson(e),
+          )
+          .toList();
+    }
+    throw Exception(
+      "HTTP ${response.statusCode}",
+    );
+  }
+  catch(e){
+    print(
+      "PRODUCT API ERROR => $e",
+    );
+    throw Exception(
+      "PRODUCT ERROR : $e",
+    );
+  }
+}
 }
 
 
