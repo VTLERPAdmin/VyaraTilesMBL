@@ -225,47 +225,59 @@ static Future<LedgerFilterModel> getLedgerFilters(
 // =========================
 
 
-static Future<String> getLedgerReport({
+// =========================
+// LEDGER REPORT
+// =========================
+static Future getLedgerReport({
   required String clientIds,
   required String fromDate,
   required String toDate,
   required bool mergeClients,
   required bool grandTotal,
+  required String userId,
 }) async {
-
   try {
+    final url = Uri.parse("${baseUrl}Ledger");
 
-    final url =
-        "${baseUrl}Ledger?"
-        "ClientID=$clientIds"
-        "&FromDate=$fromDate"
-        "&ToDate=$toDate"
-        "&MergeClients=$mergeClients"
-        "&GrandTotal=$grandTotal";
+    final body = {
+      "ClientID": clientIds,
+      "FromDate": fromDate,
+      "ToDate": toDate,
+      "MergeClients": mergeClients,
+      "GrandTotal": grandTotal,
+      "UserID": userId,
+    };
 
-    print("LEDGER REPORT URL => $url");
+    print("================================");
+    print("LEDGER REPORT API");
+    print("URL => $url");
+    print("BODY => ${jsonEncode(body)}");
+    print("================================");
 
-    final response = await http.get(
-      Uri.parse(url),
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: jsonEncode(body),
     );
 
-    print("LEDGER REPORT RESPONSE => ${response.body}");
+    print("LEDGER STATUS => ${response.statusCode}");
+    print("LEDGER RESPONSE => ${response.body}");
 
     final data = jsonDecode(response.body);
 
     if (response.statusCode == 200 &&
         data["StatusCode"] == 200) {
-
       return data["Message"] ?? "";
-
-    } else {
-
-      throw Exception(
-        data["Message"] ?? "Failed",
-      );
     }
 
+    final message = (data["Message"] ?? "Failed").toString();
+
+    throw Exception(message);
   } catch (e) {
+    print("LEDGER REPORT ERROR => $e");
 
     throw Exception(
       "LEDGER REPORT ERROR : $e",
@@ -636,7 +648,7 @@ static Future<String> getWorkOrderReport({
   required String userId,
   required String token,
   required Map<String, dynamic> body,
-  required String reportType,
+  required int reportType,
 }) async {
   print("🔵 WORK ORDER REPORT REQUEST");
   print("USERID: $userId");

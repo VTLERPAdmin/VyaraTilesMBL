@@ -51,7 +51,7 @@ int? selectedSite;
 
     try {
       final uri = Uri.parse(
-        "https://vyaratiles.co.in/Api/DispPlanRptData?UserID=${widget.userId}",
+        "https://vyaratiles.co.in/Api/DPlanRptData?UserID=${widget.userId}",
       );
 
       debugPrint("API CALL => $uri");
@@ -160,7 +160,7 @@ int? selectedSite;
 
     try {
       final uri = Uri.parse(
-        "https://vyaratiles.co.in/Api/DispPlanReport",
+        "https://vyaratiles.co.in/Api/DPlanRpt",
       );
 
      final body = {

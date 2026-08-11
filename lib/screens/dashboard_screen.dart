@@ -7,7 +7,6 @@ import 'dart:async';
 import 'dart:io';
 import 'login_screen.dart';
 import '../screens/loader_service.dart';
-import '../screens/so_approval_screen.dart';
 import '../screens/product_screen.dart';
 import 'sales_order_screen.dart';
 import '../screens/ledger_screen.dart';

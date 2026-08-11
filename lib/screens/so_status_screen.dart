@@ -130,7 +130,7 @@ void initState() {
       "ClubOrders": clubOrders ? 1 : 0,
       "ClubSites": clubSites ? 1 : 0,
       "ClubLots": clubLots ? 1 : 0,
-      "UnitID": selectedUnit?.id ?? 0,
+      "UoMCode": selectedUnit?.id ?? 0,
     };
 
     final pdfUrl = await ApiService.getSOStatusReport(

@@ -24,6 +24,7 @@ class ProductModel {
   final double pcsPerSqMt;
   final String uom;
   final double mrp;
+  final String Weight;
 
   final String cementType;
 
@@ -49,6 +50,7 @@ class ProductModel {
     required this.pcsPerSqMt,
     required this.uom,
     required this.mrp,
+    required this.Weight,
     required this.cementType,
     required this.id,
     required this.productName,
@@ -83,6 +85,7 @@ class ProductModel {
       json["PcsPerSqMt"].toString(),
     ) ??
     0,
+    Weight: json["Weight"] ?? "",
 
       uom: json["uom"] ?? "",
 

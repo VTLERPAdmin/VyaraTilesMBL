@@ -165,22 +165,9 @@ Future<void> loadProducts() async {
       });
 
     }
-
-
   }
-
-
 }
-
-
-
-
- 
-
-
   void buildDropdownData(){
-
-
     productGroups =
         allProducts
             .map(
@@ -191,9 +178,6 @@ Future<void> loadProducts() async {
         )
             .toSet()
             .toList();
-
-
-
     eqTypes =
         allProducts
             .map(
@@ -681,8 +665,8 @@ Widget buildProductCard(BuildContext context, ProductModel item) {
 
 
               infoItem(
-                  "Equipment",
-                  item.eqType
+                  "Weight",
+                  item.Weight
               ),
 
 
@@ -696,6 +680,12 @@ Widget buildProductCard(BuildContext context, ProductModel item) {
                   "Cement",
                   item.cementType
               ),
+
+              /*
+              infoItem(
+                  "Weight",
+                  item.Weight
+              ), */
 
 
             ],
@@ -770,6 +760,7 @@ Widget buildProductCard(BuildContext context, ProductModel item) {
 
 
                 ],
+                
 
               ),
 
@@ -1347,6 +1338,12 @@ detailRow(
 "Cement",
 item.cementType
 ),
+
+
+detailRow(
+  "Weight",
+  item.Weight
+),  
 
 
 detailRow(

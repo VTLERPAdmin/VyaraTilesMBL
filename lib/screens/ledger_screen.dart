@@ -338,43 +338,75 @@ Future<void> openClientSelector() async {
 }
 
   // ================= GENERATE REPORT =================
-  Future<void> generateReport() async {
-    if (selectedClients.isEmpty) {
-      showError("Please select client");
-      return;
-    }
-
-    if (fromDateController.text.isEmpty ||
-        toDateController.text.isEmpty) {
-      showError("Please select dates");
-      return;
-    }
-
-   
-
-    try {
-      final clientIds =
-          selectedClients.map((e) => e.id).join(",");
-
-      final pdfUrl = await ApiService.getLedgerReport(
-        clientIds: clientIds,
-        fromDate: fromDateController.text,
-        toDate: toDateController.text,
-        mergeClients: mergeClients,
-        grandTotal: grandTotal,
-      );
-
-      await launchUrl(
-        Uri.parse(pdfUrl),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (e) {
-      showError(e.toString());
-    } finally {
-      setState(() => generating = false);
-    }
+  Future generateReport() async {
+  if (selectedClients.isEmpty) {
+    showError("Please select client");
+    return;
   }
 
+  if (fromDateController.text.isEmpty ||
+      toDateController.text.isEmpty) {
+    showError("Please select dates");
+    return;
+  }
+
+  setState(() {
+    generating = true;
+  });
+
+   LoaderService.show(
+    context,
+    title: "Generating Ledger",
+    subtitle: "Preparing your report...",
+  );
+
+  try {
+    final clientIds =
+        selectedClients.map((e) => e.id).join(",");
+
+    print("================================");
+    print("GENERATING LEDGER");
+    print("UserID => $userId");
+    print("ClientIDs => $clientIds");
+    print("FromDate => ${fromDateController.text}");
+    print("ToDate => ${toDateController.text}");
+    print("MergeClients => $mergeClients");
+    print("GrandTotal => $grandTotal");
+    print("================================");
+
+    final pdfUrl = await ApiService.getLedgerReport(
+      clientIds: clientIds,
+      fromDate: fromDateController.text,
+      toDate: toDateController.text,
+      mergeClients: mergeClients,
+      grandTotal: grandTotal,
+      userId: userId,
+    );
+
+    print("PDF URL => $pdfUrl");
+
+    if (pdfUrl.toString().isEmpty) {
+      throw Exception("PDF path is empty");
+    }
+
+    await launchUrl(
+      Uri.parse(pdfUrl.toString()),
+      mode: LaunchMode.externalApplication,
+    );
+  } catch (e) {
+    showError(e.toString());
+  } finally {
+    if (mounted) {
+
+      LoaderService.hide();
+      setState(() {
+        generating = false;
+
+       
+      });
+    }
+  }
+}
   // ================= ERROR DIALOG =================
   void showError(String message) {
     showDialog(
@@ -446,18 +478,29 @@ Future<void> openClientSelector() async {
                   setState(() => grandTotal = v ?? false);
                 }),
 
-                SizedBox(
-                  width: isDesktop ? 250 : double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF06224D),
-                    ),
-                  onPressed: generateReport,
-                child: const Text("Generate Report",
-                    style: TextStyle(color: Colors.white)),
-                  ),
-                ),
+               SizedBox(
+  width: isDesktop ? 250 : double.infinity,
+  height: 50,
+  child: ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF06224D),
+    ),
+    onPressed: generating ? null : generateReport,
+    child: generating
+        ? const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          )
+        : const Text(
+            "Generate Report",
+            style: TextStyle(color: Colors.white),
+          ),
+  ),
+),
               ],
             ),
           ),

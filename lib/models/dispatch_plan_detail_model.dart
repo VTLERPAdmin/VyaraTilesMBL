@@ -22,6 +22,7 @@ class DispatchPlanDetailModel {
   final double ordQty;
   final double saleQty;
   final double pendSaleQty;
+  final double pendingPlanQty;
   final double stockQty;
   final double CreditLimit;
   final double BalAmt;
@@ -30,7 +31,7 @@ class DispatchPlanDetailModel {
 
   // Planning fields
   final int planId;
-  final int PlannedQty;
+  final double PlannedQty;
   final DateTime? planDate;
   final String planType;
   final double addLessQty;
@@ -57,6 +58,7 @@ class DispatchPlanDetailModel {
     required this.ordQty,
     required this.saleQty,
     required this.pendSaleQty,
+    required this.pendingPlanQty,
     required this.stockQty,
     required this.CreditLimit,
     required this.BalAmt,
@@ -94,6 +96,7 @@ class DispatchPlanDetailModel {
       ordQty: double.tryParse(json["OrdQty"].toString()) ?? 0,
       saleQty: double.tryParse(json["SaleQty"].toString()) ?? 0,
       pendSaleQty: double.tryParse(json["PendSaleQty"].toString()) ?? 0,
+      pendingPlanQty: double.tryParse(json["PendingPlanQty"].toString()) ?? 0,
       stockQty: double.tryParse(json["StockQty"].toString()) ?? 0,
       CreditLimit: double.tryParse(json["CreditLimit"].toString()) ?? 0,
       BalAmt: double.tryParse(json["BalAmt"].toString()) ?? 0,
@@ -101,7 +104,7 @@ class DispatchPlanDetailModel {
       maxPlanQty: double.tryParse(json["MaxPlanQty"].toString()) ?? 0,
 
       planId: int.tryParse(json["PlanID"].toString()) ?? 0,
-      PlannedQty: int.tryParse(json["Planned Qty"].toString()) ??0,
+      PlannedQty: double.tryParse(json["Planned Qty"].toString()) ??0,
 
       planDate: json["PlanDate"] != null && json["PlanDate"].toString().isNotEmpty
           ? DateTime.tryParse(json["PlanDate"].toString())

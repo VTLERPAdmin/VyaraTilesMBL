@@ -99,7 +99,11 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
     }
   }
 
-  Future<void> generateReport(String reportType) async {
+  Future<void> generateReport(int reportType) async {
+    setState(() {
+      generating = true;
+    });
+
     LoaderService.show(
       context,
       title: "Generating Report",
@@ -122,7 +126,7 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
         "ProductContains": containsController.text.trim(),
         "ShowSite": showSite ? 1 : 0,
         "IncludeZeroValues": includeZeroValues ? 1 : 0,
-        "UnitID": selectedUnit?.id ?? 0,
+        "UnitID": selectedUnit?.name?? "",
       };
 
       final pdfUrl = await ApiService.getWorkOrderReport(
@@ -159,6 +163,11 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
       );
     } finally {
       LoaderService.hide();
+      if (mounted) {
+        setState(() {
+          generating = false;
+        });
+      }
     }
   }
 
@@ -306,19 +315,19 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
                             "WO-Wise",
                             onPressed: generating
                                 ? null
-                                : () => generateReport("WO Wise"),
+                                : () => generateReport(1),
                           ),
                           _buildReportButton(
                             "Equip. Wise",
                             onPressed: generating
                                 ? null
-                                : () => generateReport("Equ Wise"),
+                                : () => generateReport(2),
                           ),
                           _buildReportButton(
                             "Summary",
                             onPressed: generating
                                 ? null
-                                : () => generateReport("Summary"),
+                                : () => generateReport(3),
                           ),
                         ],
                       ),
