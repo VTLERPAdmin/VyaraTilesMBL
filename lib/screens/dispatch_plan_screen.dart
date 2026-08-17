@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import '../models/dispatch_plan_filter_model.dart';
 import '../services/api_services.dart';
 import 'dart:async';
+import '../config/app_config.dart';
 import '../screens/loader_service.dart';
 import '../screens/dispatchplan_detail_screen.dart';
 class DispatchPlanScreen extends StatefulWidget { 
     final String userId;
+    final String userPwd;
 
         
     const DispatchPlanScreen({
     super.key,
     required this.userId,
+    required this.userPwd,
     
   });
 
@@ -72,7 +75,10 @@ Future<void> loadData() async {
   );
 
   try {
-    final data = await ApiService.getDispatchPlanList(widget.userId);
+    final data = await ApiService.getDispatchPlanList(
+      widget.userId,
+      widget.userPwd,
+    );
 
     if (!mounted) return;
 
@@ -179,7 +185,10 @@ Future<void> fetchDispatchPlans() async {
   setState(() => isLoading = true);
 
   try {
-    final data = await ApiService.getDispatchPlanList(widget.userId);
+    final data = await ApiService.getDispatchPlanList(
+      widget.userId,
+      widget.userPwd,
+    );
 
     setState(() {
       allRecords = data;
@@ -205,6 +214,7 @@ Future<void> fetchPlans() async {
 
   final data = await ApiService.getDispatchPlanList(
     widget.userId,
+    widget.userPwd,
   );
 
   setState(() {
@@ -320,6 +330,7 @@ void applyLocalFilter() {
               soSrNo: selected.soSrNo,
               solocId: selected.solocId,
               userId: widget.userId,
+              userPwd: widget.userPwd,
             ),
           ),
         );

@@ -42,6 +42,7 @@ class _SoStatusScreenState extends State<SoStatusScreen> {
   bool clubLots = false;
 
 String userId = "";
+String userPwd = "";
 String token = "";
   
 
@@ -56,6 +57,7 @@ void initState() {
 
   if (session != null) {
     userId = session["userId"] ?? "";
+    userPwd = session["password"] ?? "";
     token = "ab";
 
     print("CURRENT USER => $userId");
@@ -80,7 +82,7 @@ void initState() {
   );
 
   try {
-    final data = await ApiService.getSOFilters(userId, token);
+    final data = await ApiService.getSOFilters(userId, userPwd, token);
 
     if (!mounted) return;
 
@@ -135,6 +137,7 @@ void initState() {
 
     final pdfUrl = await ApiService.getSOStatusReport(
       userId: userId,
+      userPwd: userPwd,
       token: token,
       body: body,
     );

@@ -1,8 +1,7 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SessionManager {
-
   // =========================
   // SAVE LOGIN SESSION
   // =========================
@@ -11,21 +10,23 @@ class SessionManager {
     required String password,
     required dynamic userData,
   }) async {
-
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setString("userId", userId);
     await prefs.setString("password", password);
     await prefs.setString("userData", jsonEncode(userData));
 
-    // optional fallback
+    // Optional fallback
     await prefs.setString("lastUserId", userId);
 
     final name = userData["Message"]?.toString() ?? "";
     await prefs.setString("userName", name);
 
-    // Menus (ERP access control)
-    final menus = List<String>.from(userData["Menus"] ?? []);
+    // ERP access control menus
+    final menus = List<String>.from(
+      userData["Menus"] ?? [],
+    );
+
     await prefs.setStringList("menus", menus);
 
     print("✅ SESSION SAVED");
@@ -38,7 +39,6 @@ class SessionManager {
   // GET FULL SESSION
   // =========================
   static Future<Map<String, dynamic>?> getSession() async {
-
     final prefs = await SharedPreferences.getInstance();
 
     final userId = prefs.getString("userId");
@@ -63,11 +63,21 @@ class SessionManager {
   }
 
   // =========================
-  // GET USER ID (IMPORTANT)
+  // GET USER ID
   // =========================
   static Future<String> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
+
     return prefs.getString("userId") ?? "";
+  }
+
+  // =========================
+  // GET PASSWORD
+  // =========================
+  static Future<String> getPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return prefs.getString("password") ?? "";
   }
 
   // =========================
@@ -75,25 +85,22 @@ class SessionManager {
   // =========================
   static Future<String> getUserName() async {
     final prefs = await SharedPreferences.getInstance();
+
     return prefs.getString("userName") ?? "";
   }
 
   // =========================
-  // CLEAR SESSION (LOGOUT)
+  // CLEAR SESSION
   // =========================
- 
+  static Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
 
-static Future<void> clearSession() async {
-  final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("userId");
+    await prefs.remove("password");
+    await prefs.remove("userData");
+    await prefs.remove("userName");
+    await prefs.remove("menus");
 
-  await prefs.remove("userId");
-  await prefs.remove("password");
-  await prefs.remove("userData");
-  await prefs.remove("userName");
-  await prefs.remove("menus");
-
-  print("SESSION CLEARED COMPLETELY");
-}
-
- 
+    print("SESSION CLEARED COMPLETELY");
+  }
 }

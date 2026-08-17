@@ -40,26 +40,45 @@ class _SOAcknowledgeScreenState extends State<SOAcknowledgeScreen> {
   }
 
   Future<void> loadSOList() async {
-    try {
-      final userId = await SessionManager.getUserId();
-      final data = await ApiService.getSOAcknowledgementList(userId: userId);
+  try {
+    final session = await SessionManager.getSession();
 
-      if (!mounted) return;
-
-      setState(() {
-        allSOList = data
-            .where((e) => e.approved == true)
-            .toList();
-        filterSOs();
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        allSOList = [];
-        soList = [];
-      });
+    if (session == null) {
+      throw Exception("Session not found");
     }
+
+    final userId = session["userId"] as String;
+    final userPwd = session["password"] as String;
+
+    print("📋 SO ACK LIST SCREEN");
+    print("UserID => $userId");
+    print("Password loaded => ${userPwd.isNotEmpty}");
+
+    final data = await ApiService.getSOAcknowledgementList(
+      userId: userId,
+      userPwd: userPwd,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      allSOList = data
+          .where((e) => e.approved == true)
+          .toList();
+
+      filterSOs();
+    });
+  } catch (e) {
+    print("❌ SO ACK LIST SCREEN ERROR => $e");
+
+    if (!mounted) return;
+
+    setState(() {
+      allSOList = [];
+      soList = [];
+    });
   }
+}
 
   void filterSOs() {
     final query = searchController.text.toLowerCase().trim();

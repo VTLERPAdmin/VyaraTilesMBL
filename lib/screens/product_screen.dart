@@ -8,10 +8,12 @@ import 'loader_service.dart';
 class ProductScreen extends StatefulWidget {
 
   final String userId;
+  final String userpwd;
 
   const ProductScreen({
     super.key,
     required this.userId,
+    required this.userpwd,
   });
 
   @override
@@ -98,6 +100,9 @@ Future<void> loadProducts() async {
 
     final data = await ApiService.getProducts(
       widget.userId,
+      widget.userpwd,
+      
+      
     );
 
 

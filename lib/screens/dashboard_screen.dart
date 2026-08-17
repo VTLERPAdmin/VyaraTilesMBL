@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,10 @@ import '../screens/work_order_status_screen.dart';
 import '../PrevMnt/services/PrevMnt_api_services.dart';
 import '../PrevMnt/screens/PrevMntHomeScreen.dart';
 import '../widgets/no_internet_screen.dart';
+import '../screens/sample_request_screen.dart';
+import '../config/app_config.dart';
+
+
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -31,12 +36,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<String> menus = [];
   bool isLoading = true;
   bool hasConnectionError = false;
-  
-  bool get  hasEVPermission => menus.contains("mnuMblEVRead");
+
+  bool get hasEVPermission => menus.contains("mnuMblEVRead");
   bool get hasPrevMntPermission => menus.contains("mnuPrevMnt");
-  
+
   String getGreeting() {
-    final hour = DateTime.now().hour; 
+    final hour = DateTime.now().hour;
 
     if (hour >= 5 && hour < 12) {
       return "Good Morning";
@@ -48,8 +53,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return "Good Night";
     }
   }
-
-
 
   @override
   void initState() {
@@ -74,18 +77,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-
   // Check connectivity before loading dashboard
   Future<void> _checkConnectivity() async {
     try {
       await http
-          .get(Uri.parse("https://vyaratiles.co.in/Api/ERPAuth"))
+          .get(
+            Uri.parse(
+              "https://vyaratiles.co.in/Api/ERPAuth",
+            ),
+          )
           .timeout(const Duration(seconds: 5));
 
       if (!mounted) return;
+
       setState(() => hasConnectionError = false);
     } catch (e) {
       if (!mounted) return;
+
       if (_isConnectionError(e)) {
         setState(() => hasConnectionError = true);
       }
@@ -106,6 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final prefs = await SharedPreferences.getInstance();
 
     userName = prefs.getString("userName") ?? "User";
+
     menus = (prefs.getStringList("menus") ?? [])
         .map((e) => e.trim())
         .toList();
@@ -114,6 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ================= OPEN PREVENTIVE MAINTENANCE MODULE =================
+
   Future<void> openPrevMnt(BuildContext context) async {
     LoaderService.show(
       context,
@@ -126,10 +136,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       if (session == null) {
         LoaderService.hide();
+
         if (!context.mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Session expired. Please log in again.")),
+          const SnackBar(
+            content: Text(
+              "Session expired. Please log in again.",
+            ),
+          ),
         );
+
         return;
       }
 
@@ -144,26 +161,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       if (response["StatusCode"] == 200) {
         final prefs = await SharedPreferences.getInstance();
+
         bool isSupervisor = response["IsSupervisor"] ?? false;
-        await prefs.setString("role", isSupervisor ? "Supervisor" : "Employee");
-        await prefs.setString("userName", response["UserName"] ?? userName);
+
+        await prefs.setString(
+          "role",
+          isSupervisor ? "Supervisor" : "Employee",
+        );
+
+        await prefs.setString(
+          "userName",
+          response["UserName"] ?? userName,
+        );
 
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PrevMntHomeScreen(userData: response),
+            builder: (_) => PrevMntHomeScreen(
+              userData: response,
+            ),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response["Message"] ?? "Preventive Maintenance login failed")),
+          SnackBar(
+            content: Text(
+              response["Message"] ??
+                  "Preventive Maintenance login failed",
+            ),
+          ),
         );
       }
     } catch (e) {
       LoaderService.hide();
+
       if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(
+          content: Text("Error: $e"),
+        ),
       );
     }
   }
@@ -182,7 +219,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-
                 Container(
                   width: 70,
                   height: 70,
@@ -222,7 +258,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 Row(
                   children: [
-
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
@@ -267,7 +302,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         child: const Text(
                           "Yes",
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -283,12 +320,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Show NoInternetScreen if no connection
+    // Show NoInternetScreen if no connection
     if (hasConnectionError) {
       return NoInternetScreen(
         onRetry: () {
           setState(() => hasConnectionError = false);
-          
+
           LoaderService.show(
             context,
             title: "Loading Dashboard",
@@ -317,15 +354,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "mnuRptSOStatus": true,
       "mnuRptWOStatus": true,
       "mnuProdSOAppr": true,
-      "mnuProdMastProdInfo": true
+      "mnuProdMastProdInfo": true,
+      "mnusampleReqClient": true,
+
+      // =========================
+      // SAMPLE REQUEST
+      // =========================
+      "mnuSamplesReqClient": true,
     };
 
     final visibleMenus = menus
-        .where((e) => menuMap.containsKey(e.trim()))
+        .where(
+          (e) => menuMap.containsKey(e.trim()),
+        )
         .toList();
 
-
     int crossAxisCount = 2;
+
     if (width > 1200) {
       crossAxisCount = 5;
     } else if (width > 900) {
@@ -333,21 +378,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else if (width > 700) {
       crossAxisCount = 3;
     } else if (width < 340) {
-      // Very narrow screens (Galaxy Z Flip cover screen, folded state, etc.)
-      // give each card the full width instead of squeezing 2 into a tiny row.
       crossAxisCount = 1;
     }
 
-    // Cell width per card determines how much the title has to wrap.
-    // Narrower cards need a taller cell to fit a 2-line title + subtitle.
     final cardWidth =
-        (width - 30 - (crossAxisCount - 1) * 14) / crossAxisCount;
-    final cardHeight = cardWidth < 140 ? 172.0 : 145.0;
+        (width - 30 - (crossAxisCount - 1) * 14) /
+            crossAxisCount;
+
+    final cardHeight =
+        cardWidth < 140 ? 172.0 : 145.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FF),
+
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(130),
+
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -367,23 +413,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Colors.black26,
                 blurRadius: 15,
                 offset: Offset(0, 5),
-              )
+              ),
             ],
           ),
+
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
 
+              child: Row(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+
+                children: [
                   // LEFT TEXT
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
 
-                        // GREETING
+                      children: [
                         Text(
                           getGreeting(),
                           style: const TextStyle(
@@ -395,11 +447,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                         const SizedBox(height: 4),
 
-                        // USERNAME + ICON
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-
                             const Icon(
                               Icons.person_2_rounded,
                               size: 16,
@@ -412,11 +462,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               child: Text(
                                 userName,
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                overflow:
+                                    TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight:
+                                      FontWeight.w600,
                                 ),
                               ),
                             ),
@@ -425,14 +477,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                             const Text(
                               "👋",
-                              style: TextStyle(fontSize: 14),
+                              style:
+                                  TextStyle(fontSize: 14),
                             ),
                           ],
                         ),
 
                         const SizedBox(height: 6),
 
-                        // SUBTITLE
                         const Text(
                           "Welcome to Vyara Tiles ERP App",
                           style: TextStyle(
@@ -449,10 +501,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: logout,
                     child: Container(
                       padding: const EdgeInsets.all(10),
+
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(14),
+                        color:
+                            Colors.white.withOpacity(0.15),
+                        borderRadius:
+                            BorderRadius.circular(14),
                       ),
+
                       child: const Icon(
                         Icons.logout_rounded,
                         color: Colors.white,
@@ -466,9 +522,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
+
       body: Stack(
         children: [
-
           // MAIN UI
           SingleChildScrollView(
             child: Padding(
@@ -478,8 +534,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 top: 8,
                 bottom: 15,
               ),
+
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+
                 children: [
                   const Text(
                     "ERP Operations",
@@ -489,26 +548,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: Color(0xFF111827),
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   // ================= ERP GRID =================
+
                   GridView.builder(
                     padding: EdgeInsets.zero,
                     itemCount: visibleMenus.length,
                     shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
+                    physics:
+                        const NeverScrollableScrollPhysics(),
+
                     gridDelegate:
                         SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                          mainAxisExtent: cardHeight,
-                        ),
+                      crossAxisCount:
+                          crossAxisCount,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      mainAxisExtent: cardHeight,
+                    ),
+
                     itemBuilder: (context, index) {
-                      return _buildCard(context, visibleMenus[index]);
+                      return _buildCard(
+                        context,
+                        visibleMenus[index],
+                      );
                     },
                   ),
 
                   const SizedBox(height: 15),
+
+                  // =========================
+                  // EV OPERATIONS
+                  // =========================
 
                   if (hasEVPermission) ...[
                     const Text(
@@ -527,53 +600,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const EVOperationsScreen(),
+                            builder: (_) =>
+                                const EVOperationsScreen(),
                           ),
                         );
                       },
+
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding:
+                            const EdgeInsets.all(16),
+
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius:
+                              BorderRadius.circular(22),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black
+                                  .withOpacity(0.05),
                               blurRadius: 15,
-                              offset: const Offset(0, 4),
+                              offset:
+                                  const Offset(0, 4),
                             ),
                           ],
                         ),
+
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+
                           children: [
                             Container(
                               width: 52,
                               height: 52,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEEF4FF),
-                                borderRadius: BorderRadius.circular(14),
+
+                              decoration:
+                                  BoxDecoration(
+                                color:
+                                    const Color(
+                                  0xFFEEF4FF,
+                                ),
+                                borderRadius:
+                                    BorderRadius.circular(
+                                  14,
+                                ),
                               ),
+
                               child: const Icon(
                                 Icons.ev_station,
-                                color: Color(0xFF2563EB),
+                                color:
+                                    Color(0xFF2563EB),
                                 size: 28,
                               ),
                             ),
+
                             const SizedBox(height: 14),
+
                             const Text(
                               "EV Operations",
                               style: TextStyle(
                                 fontSize: 15,
-                                fontWeight: FontWeight.w600,
+                                fontWeight:
+                                    FontWeight.w600,
                               ),
                             ),
+
                             const SizedBox(height: 4),
+
                             Text(
                               "Vehicle Management",
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade600,
+                                color:
+                                    Colors.grey.shade600,
                               ),
                             ),
                           ],
@@ -583,6 +682,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     const SizedBox(height: 25),
                   ],
+
+                  // =========================
+                  // PREVENTIVE MAINTENANCE
+                  // =========================
+
                   if (hasPrevMntPermission) ...[
                     const Text(
                       "Preventive Maintenance",
@@ -599,47 +703,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onTap: () {
                         openPrevMnt(context);
                       },
+
                       child: Container(
-                        padding: const EdgeInsets.all(14),
+                        padding:
+                            const EdgeInsets.all(14),
+
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius:
+                              BorderRadius.circular(22),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black
+                                  .withOpacity(0.05),
                               blurRadius: 15,
-                              offset: const Offset(0, 4),
+                              offset:
+                                  const Offset(0, 4),
                             ),
                           ],
                         ),
+
                         child: Row(
                           children: [
                             Container(
                               width: 48,
                               height: 48,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE7F8EF),
-                                borderRadius: BorderRadius.circular(14),
+
+                              decoration:
+                                  BoxDecoration(
+                                color:
+                                    const Color(
+                                  0xFFE7F8EF,
+                                ),
+                                borderRadius:
+                                    BorderRadius.circular(
+                                  14,
+                                ),
                               ),
+
                               child: const Icon(
-                                Icons.build_circle_outlined,
-                                color: Color(0xFF059669),
+                                Icons
+                                    .build_circle_outlined,
+                                color:
+                                    Color(0xFF059669),
                                 size: 24,
                               ),
                             ),
+
                             const SizedBox(width: 12),
+
                             const Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment
+                                        .start,
+
                                 children: [
                                   Text(
                                     "Preventive Maintenance",
                                     style: TextStyle(
                                       fontSize: 14,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight:
+                                          FontWeight.w600,
                                     ),
                                   ),
+
                                   SizedBox(height: 3),
+
                                   Text(
                                     "Machine Service Scheduling",
                                     style: TextStyle(
@@ -650,13 +780,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ],
                               ),
                             ),
-                            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+
+                            const Icon(
+                              Icons
+                                  .arrow_forward_ios,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                           ],
                         ),
                       ),
                     ),
                   ],
-
                 ],
               ),
             ),
@@ -666,7 +801,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildCard(BuildContext context, String menu) {
+  // =========================================================
+  // DASHBOARD CARD
+  // =========================================================
+
+  Widget _buildCard(
+    BuildContext context,
+    String menu,
+  ) {
     final cleanMenu = menu.trim();
 
     final Map<String, dynamic> map = {
@@ -674,8 +816,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "title": "Dispatch Plan",
         "subtitle": "Plan Dispatch",
         "icon": Icons.local_shipping_outlined,
-        "color": const Color.fromARGB(255, 236, 240, 32),
+        "color": const Color.fromARGB(
+          255,
+          236,
+          240,
+          32,
+        ),
       },
+
       "mnuRptDispatchDispPlans": {
         "title": "Planning Report",
         "subtitle": "Dispatch Report",
@@ -691,7 +839,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
 
       "mnuRptSOStatus": {
-        "title": "SO Status ",
+        "title": "SO Status",
         "subtitle": "SO Tracking",
         "icon": Icons.receipt_long,
         "color": const Color(0xFFF59E0B),
@@ -717,12 +865,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "icon": Icons.inventory_2_outlined,
         "color": const Color(0xFF10B981),
       },
-           
+
+      // =====================================================
+      // SAMPLE REQUEST
+      // =====================================================
+/*
+      "mnuSamplesReqClient": {
+        "title": "Sample Request",
+        "subtitle": "Request Samples",
+        "icon": Icons.inventory_outlined,
+        "color": const Color(0xFFEC4899),
+      }, */
     };
 
     final item = map[cleanMenu];
 
-    if (item == null) return const SizedBox();
+    if (item == null) {
+      return const SizedBox();
+    }
 
     return InkWell(
       onTap: () {
@@ -732,21 +892,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
           case "mnuRptSOStatus":
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const SalesOrderScreen()),
+              MaterialPageRoute(
+                builder: (_) =>
+                    const SalesOrderScreen(),
+              ),
             );
             break;
 
           case "mnuRptLedgerMkt":
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const LedgerScreen()),
+              MaterialPageRoute(
+                builder: (_) =>
+                    const LedgerScreen(),
+              ),
             );
             break;
 
           case "mnuProdSOAppr":
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const SOModuleScreen()),
+              MaterialPageRoute(
+                builder: (_) =>
+                    const SOModuleScreen(),
+              ),
             );
             break;
 
@@ -754,76 +923,142 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => const WorkOrderStatusScreen()),
+                builder: (_) =>
+                    const WorkOrderStatusScreen(),
+              ),
             );
             break;
 
-          case "mnuProdDOPlanSOItem":
-            SessionManager.getUserId().then((userId) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DispatchPlanScreen(userId: userId),
-                ),
-              );
-            });
-            break;
+         case "mnuProdDOPlanSOItem":
+         SessionManager.getSession().then((session) {
+        if (session == null) return;
 
-             case "mnuProdMastProdInfo":
-            SessionManager.getUserId().then((userId) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProductScreen (userId: userId),
-                ),
-              );
-            });
-            break;
+         final userId = session["userId"] ?? "";
+          final userPwd = session["password"] ?? "";
 
+          Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DispatchPlanScreen(
+          userId: userId,
+          userPwd: userPwd,
+        ),
+      ),
+    );
+  });
+  break;
+
+          case "mnuProdMastProdInfo":
+  SessionManager.getSession().then((session) {
+    if (session == null) return;
+
+    final userId = session["userId"] ?? "";
+    final userPwd = session["password"] ?? "";
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductScreen(
+          userId: userId,
+          userpwd: userPwd,
+        ),
+      ),
+    );
+  });
+  break;
 
           case "mnuRptDispatchDispPlans":
-            SessionManager.getUserId().then((userId) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DispatchPlanReportScreen(
-                    userId: userId,
-                  ),
-                ),
-              );
-            });
-            break;            
+  SessionManager.getSession().then((session) {
+    if (session == null) return;
+
+    final userId = session["userId"] ?? "";
+    final userPwd = session["password"] ?? "";
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DispatchPlanReportScreen(
+          userId: userId,
+          userPwd: userPwd,
+        ),
+      ),
+    );
+  });
+  break;
+
+          // =================================================
+          // SAMPLE REQUEST
+          // =================================================
+
+           case "mnuSamplesReqClient":
+  SessionManager.getSession().then((session) {
+    if (session == null) return;
+
+    final userId = session["userId"] ?? "";
+    final userPwd = session["password"] ?? "";
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SampleRequestScreen(
+          userId: userId,
+          userpwd: userPwd,
+        ),
+      ),
+    );
+  });
+  break; 
 
           default:
-            debugPrint("Unknown menu: $cleanMenu");
+            debugPrint(
+              "Unknown menu: $cleanMenu",
+            );
         }
       },
+
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius:
+              BorderRadius.circular(22),
+
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(.05),
+              color:
+                  Colors.black.withOpacity(.05),
               blurRadius: 15,
-              offset: const Offset(0, 4),
+              offset:
+                  const Offset(0, 4),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
 
+        child: Padding(
+          padding:
+              const EdgeInsets.all(16),
+
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+
+            mainAxisSize:
+                MainAxisSize.min,
+
+            children: [
               Container(
                 width: 52,
                 height: 52,
-                decoration: BoxDecoration(
-                  color: item["color"].withOpacity(.12),
-                  borderRadius: BorderRadius.circular(14),
+
+                decoration:
+                    BoxDecoration(
+                  color: item["color"]
+                      .withOpacity(.12),
+                  borderRadius:
+                      BorderRadius.circular(
+                    14,
+                  ),
                 ),
+
                 child: Icon(
                   item["icon"],
                   color: item["color"],
@@ -836,11 +1071,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Text(
                 item["title"],
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                    TextOverflow.ellipsis,
+
                 style: const TextStyle(
                   color: Colors.black87,
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontWeight:
+                      FontWeight.w600,
                 ),
               ),
 
@@ -849,9 +1087,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Text(
                 item["subtitle"],
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                    TextOverflow.ellipsis,
+
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color:
+                      Colors.grey.shade600,
                   fontSize: 12,
                 ),
               ),
@@ -860,5 +1101,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
-  }
+
+  
+  } 
 }
+

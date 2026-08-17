@@ -128,6 +128,7 @@ if (!_isValidNumber(meterCtrl.text.trim())) {
   
     try {
       final userId = await SessionManager.getUserId();
+      final userPwd = await SessionManager.getPassword();
 
       String? imageBase64;
 
@@ -139,7 +140,8 @@ if (!_isValidNumber(meterCtrl.text.trim())) {
       final body = isStartMode
           ? {
               "EntryID": 0,
-              "UserName": userId,
+              "UserID": userId,
+              "UserPwd": userPwd,
               "EqID": widget.detail.eqId,
               "StartInfo": {
                 "ReadDate": DateTime.now().toIso8601String(),
@@ -151,7 +153,8 @@ if (!_isValidNumber(meterCtrl.text.trim())) {
             }
           : {
               "EntryID": widget.detail.entryId,
-              "UserName": userId,
+              "UserID": userId,
+               "UserPwd": userPwd,
               "EqID": widget.detail.eqId,
               "EndInfo": {
                 "ReadDate": DateTime.now().toIso8601String(),

@@ -6,13 +6,16 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../screens/loader_service.dart';
 import '../models/dispatch_plan_report_model.dart';
+import '../config/app_config.dart';
 
 class DispatchPlanReportScreen extends StatefulWidget {
   final String userId;
+  final String userPwd;
 
   const DispatchPlanReportScreen({
     Key? key,
     required this.userId,
+    required this.userPwd,
   }) : super(key: key);
 
   @override
@@ -51,8 +54,12 @@ int? selectedSite;
 
     try {
       final uri = Uri.parse(
-        "https://vyaratiles.co.in/Api/DPlanRptData?UserID=${widget.userId}",
-      );
+        "https://vyaratiles.co.in/Api/DPlanRptData",
+      ).replace(queryParameters: {
+        "UserID": widget.userId,
+        "UserPwd": widget.userPwd,
+        "VerNo": AppConfig.verNo.toString(),
+      });
 
       debugPrint("API CALL => $uri");
 
@@ -165,6 +172,8 @@ int? selectedSite;
 
      final body = {
   "UserID": widget.userId,
+  "UserPwd": widget.userPwd,
+  "VerNo": AppConfig.verNo,
   "MktPersonID": selectedMktPerson ?? 0,
   "FactoryID": selectedFactory ?? 0,
 

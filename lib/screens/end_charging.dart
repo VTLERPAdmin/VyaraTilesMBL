@@ -93,6 +93,7 @@ if (!_isValidNumber(meterCtrl.text.trim())) {
 
   try {
     final userId = await SessionManager.getUserId();
+    final userPwd = await SessionManager.getPassword();
 
     String? imageBase64;
     if (imageFile != null) {
@@ -101,7 +102,8 @@ if (!_isValidNumber(meterCtrl.text.trim())) {
 
     final body = {
       "EntryID": widget.detail.entryId,
-      "UserName": userId,
+      "UserID": userId,
+      "UserPwd": userPwd,
       "EqID": widget.detail.eqId,
       "EndInfo": {
         "ReadDate": DateTime.now().toIso8601String(),

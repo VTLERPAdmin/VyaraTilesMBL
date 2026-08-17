@@ -35,8 +35,9 @@ Future<void> loadEV() async {
     );
 
     final userId = await SessionManager.getUserId();
+    final userPwd = await SessionManager.getPassword();
 
-    final data = await ApiService.getEVList(userId);
+    final data = await ApiService.getEVList(userId, userPwd);
 
     if (!mounted) return;
 
@@ -90,9 +91,11 @@ Future<void> loadEV() async {
                  onTap: () async {
   try {
     final userId = await SessionManager.getUserId();
+    final userPwd = await SessionManager.getPassword();
 
     final detail = await ApiService.getEVDetails(
       userId: userId,
+      userPwd: userPwd,
       eqId: ev.eqId,
     );
 

@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/dispatch_plan_detail_model.dart';
+import '../config/app_config.dart';
 // import '../screens/loader_service.dart';
 
 class DispatchPlanedScreen extends StatefulWidget {
   final int soId;
   final int soSrNo;
   final String userId;
+  final String userPwd;
   final int solocId;
 
   const DispatchPlanedScreen({
@@ -15,6 +17,7 @@ class DispatchPlanedScreen extends StatefulWidget {
     required this.soId,
     required this.soSrNo,
     required this.userId,
+    required this.userPwd,
     required this.solocId,
   });
 
@@ -69,6 +72,8 @@ Future<void> savePlan() async {
 
     final body = {
       "UserID": widget.userId,
+      "UserPwd": widget.userPwd,
+      "VerNo": AppConfig.verNo,
       "PlanID": 0,
       "PlanDate": dateController.text,
       "PlanType": selectedPlanType,
@@ -152,6 +157,8 @@ Future<void> savePlan() async {
         "https://vyaratiles.co.in/Api/DPlanSO",
       ).replace(queryParameters: {
         "UserID": widget.userId,
+        "UserPwd": widget.userPwd,
+        "VerNo": AppConfig.verNo.toString(),
         "SOLocID": widget.solocId.toString(),
         "SOID": widget.soId.toString(),
         "SOSrNo": widget.soSrNo.toString(),

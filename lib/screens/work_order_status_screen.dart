@@ -38,6 +38,7 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
   bool includeZeroValues = false;
 
   String userId = "";
+  String userPwd = "";
   String token = "";
 
   @override
@@ -51,6 +52,7 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
 
     if (session != null) {
       userId = session["userId"] ?? "";
+      userPwd = session["password"] ?? "";
       token = "ab";
 
       print("WO STATUS CURRENT USER => $userId");
@@ -75,7 +77,7 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
     );
 
     try {
-      final data = await ApiService.getWOFilters(userId, token);
+      final data = await ApiService.getWOFilters(userId, userPwd, token);
 
       if (!mounted) return;
 
@@ -131,6 +133,7 @@ class _WorkOrderStatusScreenState extends State<WorkOrderStatusScreen> {
 
       final pdfUrl = await ApiService.getWorkOrderReport(
         userId: userId,
+        userPwd: userPwd,
         token: token,
         body: body,
         reportType: reportType,

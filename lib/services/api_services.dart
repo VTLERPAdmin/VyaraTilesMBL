@@ -4,15 +4,18 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:vyara_erp/models/sample_request_models.dart';
 import '../models/so_status_model.dart' hide ProductModel;
 import '../models/work_order_status_model.dart' hide ProductModel;
 import '../models/ledger_model.dart';
 import '../models/so_approval_model.dart';
 import '../models/so_acknowledgement_model.dart';
 import '../models/ev_model.dart';
+import '../config/app_config.dart';
 import '../models/dispatch_plan_filter_model.dart' hide ProductModel;
 import '../models/ev_detail_model.dart';
 import '../models/product_model.dart';
+
 
 
 class ApiService {
@@ -28,6 +31,7 @@ class ApiService {
       queryParameters: {
         "UserID": userId.trim(),
         "UserPwd": password.trim(),
+        "VerNo": AppConfig.verNo.toString(),
       },
     );
 
@@ -48,19 +52,21 @@ class ApiService {
   // =========================
   // GET SO FILTERS
   // =========================
-  // =========================
-// GET SO FILTERS
-// =========================
 
 static Future<SoStatusModel> getSOFilters(
   String userId,
+  String userPwd,
   String token,
 ) async {
 
   try {
 
     final url =
-        "${baseUrl}SOStatusFilter?UserID=${Uri.encodeComponent(userId)}&Token=$token";
+        "${baseUrl}SOStatusFilter"
+        "?UserID=${Uri.encodeComponent(userId)}"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}"
+        "&Token=$token";
 
     print("================================");
     print("SO FILTER API");
@@ -106,6 +112,7 @@ static Future<SoStatusModel> getSOFilters(
 // =========================
 static Future<String> getSOStatusReport({
   required String userId,
+  required String userPwd,
   required String token,
   required Map<String, dynamic> body,
 }) async {
@@ -119,6 +126,8 @@ static Future<String> getSOStatusReport({
 
     // ADD USER INTO BODY
     body["UserID"] = userId;
+    body["UserPwd"] = userPwd;
+    body["VerNo"] = AppConfig.verNo;
     body["Token"] = token;
 
     print("================================");
@@ -183,14 +192,22 @@ throw Exception(
 
 static Future<LedgerFilterModel> getLedgerFilters(
   String userId,
+  String userpwd,
+  int verno,
 ) async {
 
   try {
 
-    final url =
-        "${baseUrl}LedgerFilter?UserID=${Uri.encodeComponent(userId)}";
+    print("LEDGER USER ID => $userId");
+    print("LEDGER PASSWORD LENGTH => ${userpwd.length}");
+    print("LEDGER VERNO => $verno");
 
-    print("LEDGER FILTER URL => $url");
+    final url =
+        "${baseUrl}LedgerFilter?UserID=${Uri.encodeComponent(userId)}"
+        "&UserPwd=${Uri.encodeComponent(userpwd)}"
+        "&VerNo=${verno}";
+
+    print("LEDGER FILTER API CALLED");
 
     final response = await http.get(
       Uri.parse(url),
@@ -220,9 +237,7 @@ static Future<LedgerFilterModel> getLedgerFilters(
 }
 
 
-// =========================
-// LEDGER REPORT
-// =========================
+
 
 
 // =========================
@@ -235,6 +250,7 @@ static Future getLedgerReport({
   required bool mergeClients,
   required bool grandTotal,
   required String userId,
+  required String userPwd,
 }) async {
   try {
     final url = Uri.parse("${baseUrl}Ledger");
@@ -246,6 +262,8 @@ static Future getLedgerReport({
       "MergeClients": mergeClients,
       "GrandTotal": grandTotal,
       "UserID": userId,
+      "UserPwd": userPwd,
+      "VerNo": AppConfig.verNo,
     };
 
     print("================================");
@@ -290,6 +308,7 @@ static Future getLedgerReport({
 
 static Future<String> getSOPrint(
   String userId,
+  String userPwd,
   int locId,
   int soId,
 ) async {
@@ -298,6 +317,8 @@ static Future<String> getSOPrint(
     final url =
         "${baseUrl}SOPrint?"
         "UserID=$userId"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}"
         "&LocID=$locId"
         "&SOID=$soId";
 
@@ -334,6 +355,7 @@ static Future<String> getSOPrint(
 
 static Future<String> getSOPdf({
   required String userId,
+  required String userPwd,
   required int locId,
   required int soId,
 }) async {
@@ -342,7 +364,9 @@ static Future<String> getSOPdf({
 
     final url =
         "${baseUrl}SOPrint"
-        "?UserID=$userId"
+        "?UserID=${Uri.encodeComponent(userId)}"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}"
         "&LocID=$locId"
         "&SOID=$soId";
 
@@ -384,10 +408,14 @@ static Future<String> getSOPdf({
 
 static Future<List<SOApprovalModel>> getSOApprovalList({
   required String userId,
+  required String userPwd,
 }) async {
   try {
     final url =
-        "https://vyaratiles.co.in/API/SOApprList?UserID=$userId";
+        "https://vyaratiles.co.in/API/SOApprList"
+        "?UserID=$userId"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}";
 
     print("SO APPROVAL URL => $url");
 
@@ -415,6 +443,7 @@ static Future<List<SOApprovalModel>> getSOApprovalList({
 // =========================
 static Future<String> approveSO({
   required String userId,
+  required String userPwd,
   required int locId,
   required int soId,
   required String notes,
@@ -424,6 +453,8 @@ static Future<String> approveSO({
 
     final body = {
       "UserID": userId,
+      "UserPwd": userPwd,
+      "VerNo": AppConfig.verNo,
       "LocID": locId,
       "SOID": soId,
       "Notes": notes,
@@ -458,9 +489,14 @@ static Future<String> approveSO({
 // =========================
 static Future<List<SOAcknowledgementModel>> getSOAcknowledgementList({
   required String userId,
+  required String userPwd,
 }) async {
   try {
-    final url = "https://vyaratiles.co.in/API/SOAckList?UserID=$userId";
+    final url =
+        "https://vyaratiles.co.in/API/SOAckList"
+        "?UserID=$userId"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}";
 
     print("================================");
     print("📋 SO ACKNOWLEDGEMENT LIST REQUEST");
@@ -488,14 +524,18 @@ static Future<List<SOAcknowledgementModel>> getSOAcknowledgementList({
 }
 
 // =========================
-// =========================
 // SO ACKNOWLEDGE LIST (Legacy - deprecated)
 // =========================
 static Future<List<SOApprovalModel>> getSOAcknowledgeList({
   required String userId,
+  required String userPwd,
 }) async {
   try {
-    final url = "https://vyaratiles.co.in/API/SOAckList?UserID=$userId";
+    final url =
+        "https://vyaratiles.co.in/API/SOAckList"
+        "?UserID=$userId"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}";
 
     print("SO ACKNOWLEDGE URL => $url");
 
@@ -517,11 +557,11 @@ static Future<List<SOApprovalModel>> getSOAcknowledgeList({
 }
 
 // =========================
-// =========================
 // SO ACKNOWLEDGE POST
 // =========================
 static Future<String> acknowledgeSO({
   required String userId,
+  required String userPwd,
   required int locId,
   required int soId,
   required String notes,
@@ -531,6 +571,8 @@ static Future<String> acknowledgeSO({
 
     final body = {
       "UserID": userId,
+      "UserPwd": userPwd,
+      "VerNo": AppConfig.verNo,
       "LocID": locId,
       "SOID": soId,
       "Notes": notes,
@@ -574,11 +616,16 @@ static Future<String> acknowledgeSO({
 // =========================
 static Future<WorkOrderStatusModel> getWOFilters(
   String userId,
+  String userPwd,
   String token,
 ) async {
   try {
     final url =
-        "${baseUrl}WOStatusFilter?UserID=${Uri.encodeComponent(userId)}&Token=$token";
+        "${baseUrl}WOStatusFilter"
+        "?UserID=${Uri.encodeComponent(userId)}"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}"
+        "&Token=$token";
 
     print("================================");
     print("WO FILTER API");
@@ -612,9 +659,14 @@ static Future<WorkOrderStatusModel> getWOFilters(
 // =========================
 static Future<List<WorkOrderStatusModel>> getWorkOrderList({
   required String userId,
+  required String userPwd,
 }) async {
   try {
-    final url = "https://vyaratiles.co.in/API/WOStatusFilter?UserID=$userId";
+    final url =
+        "https://vyaratiles.co.in/API/WOStatusFilter"
+        "?UserID=$userId"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}";
 
     print("================================");
     print("📦 WORK ORDER LIST REQUEST");
@@ -646,6 +698,7 @@ static Future<List<WorkOrderStatusModel>> getWorkOrderList({
 // =========================
 static Future<String> getWorkOrderReport({
   required String userId,
+  required String userPwd,
   required String token,
   required Map<String, dynamic> body,
   required int reportType,
@@ -660,6 +713,8 @@ static Future<String> getWorkOrderReport({
 
     // ADD USER INTO BODY
     body["UserID"] = userId;
+    body["UserPwd"] = userPwd;
+    body["VerNo"] = AppConfig.verNo;
     body["Token"] = token;
 
     print("================================");
@@ -704,8 +759,15 @@ static Future<String> getWorkOrderReport({
 }
 
 // ================= EV LIST =================
-static Future<List<EVModel>> getEVList(String userId) async {
-  final url = "https://vyaratiles.co.in/API/EVMast?UserID=$userId";
+static Future<List<EVModel>> getEVList(
+  String userId,
+  String userPwd,
+) async {
+  final url =
+      "https://vyaratiles.co.in/API/EVMast"
+      "?UserID=$userId"
+      "&UserPwd=${Uri.encodeComponent(userPwd)}"
+      "&VerNo=${AppConfig.verNo}";
 
   final response = await http.get(Uri.parse(url));
   final data = jsonDecode(response.body);
@@ -721,10 +783,15 @@ static Future<List<EVModel>> getEVList(String userId) async {
 // ================= EV DETAILS =================
 static Future<EVDetailModel> getEVDetails({
   required String userId,
+  required String userPwd,
   required int eqId,
 }) async {
   final url =
-      "https://vyaratiles.co.in/API/EVDetails?UserID=$userId&EqID=$eqId";
+      "https://vyaratiles.co.in/API/EVDetails"
+      "?UserID=$userId"
+      "&UserPwd=${Uri.encodeComponent(userPwd)}"
+      "&VerNo=${AppConfig.verNo}"
+      "&EqID=$eqId";
 
   final response = await http.get(Uri.parse(url));
   final data = jsonDecode(response.body);
@@ -739,6 +806,8 @@ static Future<EVDetailModel> getEVDetails({
 // ================= START CHARGE =================
 static Future<String> startCharge(Map body) async {
   final url = "https://vyaratiles.co.in/API/EVStartChrg";
+
+  body["VerNo"] = AppConfig.verNo;
 
   final response = await http.post(
     Uri.parse(url),
@@ -759,6 +828,8 @@ static Future<String> startCharge(Map body) async {
 static Future<String> endCharge(Map body) async {
   final url = "https://vyaratiles.co.in/API/EVEndChrg";
 
+  body["VerNo"] = AppConfig.verNo;
+
   final response = await http.post(
     Uri.parse(url),
     headers: {"Content-Type": "application/json"},
@@ -774,18 +845,20 @@ static Future<String> endCharge(Map body) async {
   throw Exception(data["Message"] ?? "End Failed");
 }
 
-// =================== Dispatch Paln Data List =============
-
-
+// =================== Dispatch Plan Data List =============
 
 // ============ dispatch plan =========
 
 static Future<DispatchPlanModel> getDispatchPlanFilters(
   String userId,
+  String userPwd,
 ) async {
   try {
     final url =
-        "https://vyaratiles.co.in/Api/DPlanData?UserID=$userId";
+        "https://vyaratiles.co.in/Api/DPlanData"
+        "?UserID=$userId"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}";
 
     print("DISPATCH FILTER URL => $url");
 
@@ -806,7 +879,8 @@ static Future<DispatchPlanModel> getDispatchPlanFilters(
 }
    // ======================= dispatch plan list =================
 static Future<List<DispatchPlanRowModel>> getDispatchPlanList(
-  String userId, {
+  String userId,
+  String userPwd, {
   String? factory,
   String? marketingPerson,
   String? clientGroup,
@@ -817,7 +891,10 @@ static Future<List<DispatchPlanRowModel>> getDispatchPlanList(
 }) async {
   try {
     String url = 
-        "https://vyaratiles.co.in/Api/DPlanData?UserID=$userId";
+        "https://vyaratiles.co.in/Api/DPlanData"
+        "?UserID=$userId"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}";
 
     if (factory != null && factory.isNotEmpty) {
       url += "&Factory=$factory";
@@ -877,6 +954,9 @@ static Future<List<DispatchPlanRowModel>> getDispatchPlanListDynamic(
       }
     });
 
+    // Ensure version number is always present
+    cleanedParams["VerNo"] = AppConfig.verNo.toString();
+
     final uri = Uri.https(
       "vyaratiles.co.in",
       "/Api/DPlanData",
@@ -914,6 +994,7 @@ static Future<List<DispatchPlanRowModel>> getDispatchPlanListDynamic(
  // ================= GET DETAIL =================
   static Future<Map<String, dynamic>> getDispatchPlan({
     required String userId,
+    required String userPwd,
     required int solocId,
     required int soId,
     required int sosrNo,
@@ -921,6 +1002,8 @@ static Future<List<DispatchPlanRowModel>> getDispatchPlanListDynamic(
     final uri = Uri.parse(
       "$baseUrl/DPlanSO"
       "?UserID=$userId"
+      "&UserPwd=${Uri.encodeComponent(userPwd)}"
+      "&VerNo=${AppConfig.verNo}"
       "&SOLocID=$solocId"
       "&SOID=$soId"
       "&SOSrNo=$sosrNo",
@@ -942,6 +1025,8 @@ static Future<List<DispatchPlanRowModel>> getDispatchPlanListDynamic(
       Map<String, dynamic> body) async {
     final uri = Uri.parse("$baseUrl/DispPlan");
 
+    body["VerNo"] = AppConfig.verNo;
+
     final response = await http.post(
       uri,
       headers: {
@@ -962,10 +1047,14 @@ static Future<List<DispatchPlanRowModel>> getDispatchPlanListDynamic(
 
 static Future<List<ProductModel>> getProducts(
   String userId,
+  String userPwd,
 ) async {
   try {
     final url =
-        "${baseUrl}Products?UserID=${Uri.encodeComponent(userId)}";
+        "${baseUrl}Products"
+        "?UserID=${Uri.encodeComponent(userId)}"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}";
     print("==============================");
     print("PRODUCT API");
     print("URL => $url");
@@ -1002,7 +1091,160 @@ static Future<List<ProductModel>> getProducts(
     );
   }
 }
+
+
+// ============================================================
+// SAMPLE REQUEST MASTER DATA
+// ============================================================
+
+static Future<SampleRequestMasterModel> getSampleRequestData(
+  String userId,
+  String userPwd,
+) async {
+  try {
+    final url =
+        "${baseUrl}SampleReqData"
+        "?UserID=${Uri.encodeComponent(userId)}"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}";
+
+    print("================================");
+    print("SAMPLE REQUEST MASTER API");
+    print("URL => $url");
+    print("================================");
+
+    final response = await http.get(
+      Uri.parse(url),
+    );
+
+    print(
+      "SAMPLE REQUEST STATUS => ${response.statusCode}",
+    );
+
+    print(
+      "SAMPLE REQUEST RESPONSE => ${response.body}",
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        "HTTP ${response.statusCode}",
+      );
+    }
+
+    final Map<String, dynamic> data =
+        jsonDecode(response.body);
+
+    if (data["StatusCode"] != 200) {
+      throw Exception(
+        data["Message"] ??
+            "Failed to load Sample Request data",
+      );
+    }
+
+    return SampleRequestMasterModel.fromJson(
+      data,
+    );
+  } catch (e) {
+    print(
+      "SAMPLE REQUEST MASTER ERROR => $e",
+    );
+
+    throw Exception(
+      "SAMPLE REQUEST ERROR : $e",
+    );
+  }
 }
 
+static Future<Map<String, dynamic>> saveSampleRequest({
+  required String userId,
+  required String userPwd,
+  required Map<String, dynamic> body,
+}) async {
+  try {
+    final uri = Uri.parse(
+      'https://vyaratiles.co.in/API/SampleReq',
+    ).replace(
+      queryParameters: {
+        'UserID': 'Sys',
+      },
+    );
 
+    body['UserPwd'] = userPwd;
+    body['VerNo'] = AppConfig.verNo;
 
+    print('================ SAMPLE REQUEST POST ================');
+    print('URL: $uri');
+    print('BODY: ${jsonEncode(body)}');
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+
+    print('STATUS: ${response.statusCode}');
+    print('RESPONSE: ${response.body}');
+    print('======================================================');
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      if (response.body.trim().isEmpty) {
+        return {
+          'success': true,
+          'message': 'Sample Request saved successfully.',
+        };
+      }
+
+      try {
+        final decoded = jsonDecode(response.body);
+
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+
+        return {
+          'success': true,
+          'data': decoded,
+        };
+      } catch (_) {
+        return {
+          'success': true,
+          'message': response.body,
+        };
+      }
+    }
+
+    String message = 'Failed to save Sample Request.';
+
+    try {
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is Map) {
+        message =
+            decoded['message']?.toString() ??
+            decoded['Message']?.toString() ??
+            decoded['error']?.toString() ??
+            decoded['Error']?.toString() ??
+            message;
+      }
+    } catch (_) {
+      if (response.body.trim().isNotEmpty) {
+        message = response.body;
+      }
+    }
+
+    throw Exception(
+      'HTTP ${response.statusCode}: $message',
+    );
+  } catch (e) {
+    print('SAMPLE REQUEST SAVE ERROR: $e');
+
+    throw Exception(
+      'Unable to save Sample Request: $e',
+    );
+  }
+}
+}

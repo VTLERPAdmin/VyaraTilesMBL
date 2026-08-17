@@ -43,9 +43,11 @@ Future<void> loadSOList() async {
 
   try {
     final userId = await SessionManager.getUserId();
+    final userPwd = await SessionManager.getPassword();
 
     final data = await ApiService.getSOApprovalList(
       userId: userId,
+      userPwd: userPwd,
     );
 
     if (!mounted) return;

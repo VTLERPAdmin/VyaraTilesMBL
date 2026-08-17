@@ -5,6 +5,7 @@ import '../models/ledger_model.dart';
 import '../services/api_services.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import '../services/session_manager.dart';
+import '../config/app_config.dart';
 
 class LedgerScreen extends StatefulWidget {
   const LedgerScreen({super.key});
@@ -29,6 +30,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
   final TextEditingController toDateController = TextEditingController();
 
   String userId = "";
+  String userpwd = "";
+ 
 
   bool mergeClients = false;
   bool grandTotal = false;
@@ -41,17 +44,19 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   // ================= SESSION =================
   Future<void> loadSession() async {
-    final session = await SessionManager.getSession();
+  final session = await SessionManager.getSession();
 
-    if (session == null || session["userId"] == null) {
-      setState(() => loading = false);
-      showError("Session expired. Please login again.");
-      return;
-    }
-
-    userId = session["userId"];
-    await loadFilters();
+  if (session == null || session["userId"] == null) {
+    setState(() => loading = false);
+    showError("Session expired. Please login again.");
+    return;
   }
+
+  userId = session["userId"];
+  userpwd = session["password"];
+
+  await loadFilters();
+}
 
   // ================= FILTER API =================
   Future<void> loadFilters() async {
@@ -62,7 +67,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         );
 
     try {
-      final data = await ApiService.getLedgerFilters(userId);
+      final data = await ApiService.getLedgerFilters(userId, userpwd, AppConfig.verNo);
 
       fromDateController.text = formatDate(data.startDate);
       toDateController.text = formatDate(data.endDate);
@@ -381,6 +386,8 @@ Future<void> openClientSelector() async {
       mergeClients: mergeClients,
       grandTotal: grandTotal,
       userId: userId,
+      userPwd: userpwd,
+      
     );
 
     print("PDF URL => $pdfUrl");

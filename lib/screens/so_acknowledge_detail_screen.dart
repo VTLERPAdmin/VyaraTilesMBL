@@ -5,6 +5,7 @@ import '../models/so_acknowledgement_model.dart';
 import '../services/api_services.dart';
 import '../services/session_manager.dart';
 import '../screens/loader_service.dart';
+import '../config/app_config.dart';
 
 class SOAcknowledgeDetailScreen extends StatefulWidget {
   final SOAcknowledgementModel so;
@@ -48,7 +49,8 @@ class _SOAcknowledgeDetailScreenState extends State<SOAcknowledgeDetailScreen> {
 
     try {
       final pdfUrl = await ApiService.getSOPdf(
-        userId: "Sys",
+        userId: "",
+        userPwd: "",
         locId: widget.so.locId,
         soId: widget.so.soId,
       );
@@ -68,41 +70,58 @@ class _SOAcknowledgeDetailScreenState extends State<SOAcknowledgeDetailScreen> {
     }
   }
 
-  Future<void> acknowledgeSO() async {
-    try {
-      final userId = await SessionManager.getUserId();
+ Future<void> acknowledgeSO() async {
+  try {
+    final session = await SessionManager.getSession();
 
-      print("🔍 SO Object Debug:");
-      print("  locId: ${widget.so.locId}");
-      print("  soId: ${widget.so.soId}");
-      print("  soNo: ${widget.so.soNo}");
-      print("  notes: ${notesController.text}");
-      print("  userId: $userId");
-
-      await ApiService.acknowledgeSO(
-        userId: userId,
-        locId: widget.so.locId,
-        soId: widget.so.soId,
-        notes: notesController.text,
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("SO Acknowledged Successfully")),
-      );
-
-      Navigator.pop(context, true);
-    } catch (e) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Error"),
-          content: Text(e.toString()),
-        ),
-      );
+    if (session == null) {
+      throw Exception("Session not found. Please login again.");
     }
+
+    final userId = session["userId"]?.toString() ?? "";
+    final userPwd = session["password"]?.toString() ?? "";
+
+    if (userId.isEmpty || userPwd.isEmpty) {
+      throw Exception("User authentication details are missing.");
+    }
+
+    print("🔍 SO Object Debug:");
+    print("  locId: ${widget.so.locId}");
+    print("  soId: ${widget.so.soId}");
+    print("  soNo: ${widget.so.soNo}");
+    print("  notes: ${notesController.text}");
+    print("  userId: $userId");
+    print("  password available: ${userPwd.isNotEmpty}");
+
+    await ApiService.acknowledgeSO(
+      userId: userId,
+      userPwd: userPwd,
+      locId: widget.so.locId,
+      soId: widget.so.soId,
+      notes: notesController.text,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("SO Acknowledged Successfully"),
+      ),
+    );
+
+    Navigator.pop(context, true);
+  } catch (e) {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Error"),
+        content: Text(e.toString()),
+      ),
+    );
   }
+}
 
   Widget buildInfoCard(String title, String value) {
     return Container(

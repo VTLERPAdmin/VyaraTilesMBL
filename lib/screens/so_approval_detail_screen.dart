@@ -57,13 +57,32 @@ Future<void> openPDF() async {
   );
 
   try {
+    final session = await SessionManager.getSession();
+
+    if (session == null) {
+      throw Exception("Session not found. Please login again.");
+    }
+
+    final userId = session["userId"] as String;
+    final userPwd = session["password"] as String;
+
+    print("📄 OPEN SO PDF");
+    print("UserID => $userId");
+    print("Password loaded => ${userPwd.isNotEmpty}");
+    print("LocID => ${widget.so.locId}");
+    print("SOID => ${widget.so.id}");
+
     final pdfUrl = await ApiService.getSOPdf(
-      userId: "Sys",
+      userId: userId,
+      userPwd: userPwd,
       locId: widget.so.locId,
       soId: widget.so.id,
     );
 
+    if (!mounted) return;
+
     String url = pdfUrl;
+
     if (url.startsWith("//")) {
       url = "https:$url";
     }
@@ -77,12 +96,13 @@ Future<void> openPDF() async {
   } catch (e) {
     LoaderService.hide();
 
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(e.toString())),
     );
   }
 }
-
   
 
 Future<void> approveSO() async {
@@ -92,36 +112,55 @@ Future<void> approveSO() async {
     subtitle: "Please wait...", ); */
 
   
+try {
+  final session = await SessionManager.getSession();
 
-  try {
-    final userId = await SessionManager.getUserId();
+  if (session == null) {
+    throw Exception("Session not found. Please login again.");
+  }
 
-    await ApiService.approveSO(
-      userId: userId,   // ✅ dynamic login user
-      locId: widget.so.locId,
-      soId: widget.so.id,
-      notes: notesController.text,
-    );
+  final userId = session["userId"] as String;
+  final userPwd = session["password"] as String;
 
-    if (!mounted) return;
+  print("================================");
+  print("✅ APPROVE SO");
+  print("UserID => $userId");
+  print("Password loaded => ${userPwd.isNotEmpty}");
+  print("LocID => ${widget.so.locId}");
+  print("SOID => ${widget.so.id}");
+  print("Notes => ${notesController.text}");
+  print("================================");
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("SO Approved Successfully"),
-      ),
-    );
+  await ApiService.approveSO(
+    userId: userId,
+    userPwd: userPwd,
+    locId: widget.so.locId,
+    soId: widget.so.id,
+    notes: notesController.text,
+  );
 
-    Navigator.pop(context, true);
+  if (!mounted) return;
 
-  } catch (e) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Error"),
-        content: Text(e.toString()),
-      ),
-    );
-  } 
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("SO Approved Successfully"),
+    ),
+  );
+
+  Navigator.pop(context, true);
+
+} catch (e) {
+  if (!mounted) return;
+
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("Error"),
+      content: Text(e.toString()),
+    ),
+  );
+}
+  
 }
 
   Widget buildInfoCard(String title, String value) {
