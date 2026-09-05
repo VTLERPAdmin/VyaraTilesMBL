@@ -86,13 +86,22 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
 
   SampleRequestLedgerModel? _selectedLedger;
 
-  final TextEditingController _siteController =
-      TextEditingController();
+  // clients typed/added locally by the user that aren't in the
+  // master data yet (creatable "Client / Ledger" dropdown).
+  final List<SampleRequestLedgerModel> _localNewLedgers = [];
+
+  SampleRequestSiteModel? _selectedSite;
 
   final TextEditingController _referenceController =
       TextEditingController();
 
-  final TextEditingController _addressController =
+  final TextEditingController _address1Controller =
+      TextEditingController();
+
+  final TextEditingController _address2Controller =
+      TextEditingController();
+
+  final TextEditingController _address3Controller =
       TextEditingController();
 
   final TextEditingController _contactController =
@@ -166,6 +175,7 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
       subtitle: 'Fetching data from server...',
     );
 
+  if (!mounted) return;
     setState(() {
       _isLoading = true;
       _loadError = null;
@@ -178,6 +188,8 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
       );
 
       if (!mounted) return;
+      LoaderService.hide();
+      if (!mounted) return;
 
       setState(() {
         _masterData = data;
@@ -185,14 +197,14 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
       });
     } catch (e) {
       if (!mounted) return;
+      LoaderService.hide();
+      if (!mounted) return;
 
       setState(() {
         _isLoading = false;
         _loadError = e.toString();
       });
-    } finally {
-      LoaderService.hide();
-    }
+    } 
   }
 
   // ==========================================================
@@ -207,9 +219,10 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
     _dateController.dispose();
     _dueDateController.dispose();
 
-    _siteController.dispose();
     _referenceController.dispose();
-    _addressController.dispose();
+    _address1Controller.dispose();
+    _address2Controller.dispose();
+    _address3Controller.dispose();
     _contactController.dispose();
     _gstController.dispose();
     _panController.dispose();
@@ -419,20 +432,21 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
 
         _card(
           children: [
-            _responsiveRow(
-              first: _textField(
+           /* _responsiveRow(
+               first: _textField(
                 controller: _requestNoController,
                 label: 'Req. No.',
                 enabled: false,
                 hint: 'Auto generated',
-              ),
-              second: _dateField(
+              ), 
+               _dateField(
                 controller: _dateController,
                 label: 'Date',
               ),
-            ),
+            ), */
 
-            _responsiveRow(
+            _responsiveRow(              
+
               first: _dateField(
                 controller: _dueDateController,
                 label: 'Due Date',
@@ -511,11 +525,7 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
 
             const SizedBox(height: 16),
 
-            _textField(
-              controller: _siteController,
-              label: 'Site',
-              hint: 'Enter site',
-            ),
+            _siteSearch(),
 
             const SizedBox(height: 16),
 
@@ -558,9 +568,14 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
   // LEDGER SEARCH
   // ==========================================================
 
-  Widget _ledgerSearch() {
-    final data = _masterData!;
+  // All known ledgers: master data + any the user has typed/added
+  // locally in this session (creatable dropdown support).
+  List<SampleRequestLedgerModel> get _allLedgers => [
+        ...?_masterData?.ledgers,
+        ..._localNewLedgers,
+      ];
 
+  Widget _ledgerSearch() {
     return DropdownSearch<SampleRequestLedgerModel>(
       selectedItem: _selectedLedger,
 
@@ -568,24 +583,42 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
         String filter,
         LoadProps? loadProps,
       ) async {
-        final query = filter.trim().toLowerCase();
+        final query = filter.trim();
+        final lowerQuery = query.toLowerCase();
 
-        if (query.isEmpty) {
-          return data.ledgers.take(100).toList();
+        List<SampleRequestLedgerModel> results;
+
+        if (lowerQuery.isEmpty) {
+          results = _allLedgers.take(100).toList();
+        } else {
+          results = _allLedgers
+              .where(
+                (ledger) =>
+                    ledger.name.toLowerCase().contains(lowerQuery) ||
+                    ledger.id.toLowerCase().contains(lowerQuery),
+              )
+              .take(100)
+              .toList();
         }
 
-        return data.ledgers
-            .where(
-              (ledger) =>
-                  ledger.name.toLowerCase().contains(query) ||
-                  ledger.id.toLowerCase().contains(query),
-            )
-            .take(100)
-            .toList();
+        final hasExactMatch = _allLedgers.any(
+          (ledger) => ledger.name.toLowerCase() == lowerQuery,
+        );
+
+        // Offer to add a brand-new client when nothing matches exactly.
+        if (query.isNotEmpty && !hasExactMatch) {
+          results = [
+            ...results,
+            SampleRequestLedgerModel.addNewPlaceholder(query),
+          ];
+        }
+
+        return results;
       },
 
-      itemAsString: (ledger) =>
-          '${ledger.name} (${ledger.id})',
+      itemAsString: (ledger) => ledger.isAddNewPlaceholder
+          ? '+ ${ledger.name}'
+          : ledger.name ,
 
       compareFn: (a, b) => a.id == b.id,
 
@@ -673,37 +706,268 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
       ),
 
       onChanged: (ledger) {
+        if (ledger == null) {
+          setState(() {
+            _selectedLedger = null;
+            _selectedSite = null;
+            _clearAddressFields();
+          });
+          return;
+        }
+
+        if (ledger.isAddNewPlaceholder) {
+          // "isAddNewPlaceholder" rows carry the typed query inside
+          // their display name; recreate a real, brand-new ledger
+          // from it and add it to the locally-known list.
+          final typedName = ledger.name
+              .replaceFirst('Add "', '')
+              .replaceFirst('" as new client', '')
+              .trim();
+
+          final newLedger =
+              SampleRequestLedgerModel.newClient(typedName);
+
+          setState(() {
+            _localNewLedgers.add(newLedger);
+            _selectedLedger = newLedger;
+            _selectedSite = null;
+            _clearAddressFields();
+          });
+          return;
+        }
+
         setState(() {
           _selectedLedger = ledger;
+          _selectedSite = null;
+          _address1Controller.text = ledger.address.address1;
+          _address2Controller.text = ledger.address.address2;
+          _address3Controller.text = ledger.address.address3;
+        });
+      },
+    );
+  }
 
-          if (ledger == null) {
-            _addressController.clear();
-          } else {
-            _addressController.text =
-                ledger.address?.fullAddress ?? '';
-          }
+  void _clearAddressFields() {
+    _address1Controller.clear();
+    _address2Controller.clear();
+    _address3Controller.clear();
+  }
+
+  // ==========================================================
+  // SITE SEARCH (depends on selected Client / Ledger)
+  // ==========================================================
+
+  Widget _siteSearch() {
+    final sites = _selectedLedger?.sites ?? const <SampleRequestSiteModel>[];
+
+    return DropdownSearch<SampleRequestSiteModel>(
+      enabled: _selectedLedger != null,
+
+      selectedItem: _selectedSite,
+
+      items: (
+        String filter,
+        LoadProps? loadProps,
+      ) async {
+        final query = filter.trim();
+        final lowerQuery = query.toLowerCase();
+
+        List<SampleRequestSiteModel> results = lowerQuery.isEmpty
+            ? sites.take(100).toList()
+            : sites
+                .where(
+                  (site) => site.name.toLowerCase().contains(lowerQuery),
+                )
+                .take(100)
+                .toList();
+
+        final hasExactMatch = sites.any(
+          (site) => site.name.toLowerCase() == lowerQuery,
+        );
+
+        // Always let the user add a new site for this client, whether
+        // the client already has sites or none at all.
+        if (query.isNotEmpty && !hasExactMatch) {
+          results = [
+            ...results,
+            SampleRequestSiteModel(
+              id: '__ADD_NEW__',
+              name: 'Add "$query" as new site',
+            ),
+          ];
+        }
+
+        return results;
+      },
+
+      itemAsString: (site) =>
+          site.id == '__ADD_NEW__' ? '+ ${site.name}' : site.name,
+
+      compareFn: (a, b) => a.id == b.id,
+
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _inputDecoration('Site').copyWith(
+          hintText: _selectedLedger == null
+              ? 'Select a Client / Ledger first'
+              : 'Select or type a site',
+        ),
+      ),
+
+      popupProps: PopupProps.menu(
+        fit: FlexFit.loose,
+
+        menuProps: const MenuProps(
+          backgroundColor: Colors.white,
+          elevation: 8,
+        ),
+
+        showSearchBox: true,
+
+        searchFieldProps: TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search or type a new site...',
+
+            prefixIcon: const Icon(
+              Icons.search,
+              color: mutedColor,
+            ),
+
+            filled: true,
+            fillColor: Colors.white,
+
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(7),
+              borderSide: const BorderSide(
+                color: borderColor,
+              ),
+            ),
+
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(7),
+              borderSide: const BorderSide(
+                color: borderColor,
+              ),
+            ),
+
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(7),
+              borderSide: const BorderSide(
+                color: primaryColor,
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ),
+
+      suffixProps: DropdownSuffixProps(
+        clearButtonProps: ClearButtonProps(
+          isVisible: _selectedSite != null,
+
+          icon: const Icon(
+            Icons.close,
+            size: 19,
+            color: mutedColor,
+          ),
+
+          tooltip: 'Clear',
+
+          padding: EdgeInsets.zero,
+        ),
+
+        dropdownButtonProps: DropdownButtonProps(
+          isVisible: true,
+
+          iconClosed: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: primaryColor,
+          ),
+
+          iconOpened: const Icon(
+            Icons.keyboard_arrow_up_rounded,
+            color: primaryColor,
+          ),
+        ),
+      ),
+
+      onChanged: (site) {
+        if (site == null) {
+          setState(() {
+            _selectedSite = null;
+          });
+          return;
+        }
+
+        if (site.id == '__ADD_NEW__') {
+          final typedName = site.name
+              .replaceFirst('Add "', '')
+              .replaceFirst('" as new site', '')
+              .trim();
+
+          final newSite = SampleRequestSiteModel(
+            id: '__NEW__${DateTime.now().millisecondsSinceEpoch}',
+            name: typedName,
+            isNew: true,
+          );
+
+          setState(() {
+            _selectedLedger?.sites.add(newSite);
+            _selectedSite = newSite;
+          });
+          return;
+        }
+
+        setState(() {
+          _selectedSite = site;
         });
       },
     );
   }
 
   // ==========================================================
-  // ADDRESS
+  // ADDRESS (3 editable lines, auto-filled from the selected
+  // client but always editable -- including for brand-new clients)
   // ==========================================================
 
   Widget _addressBox() {
-    return TextField(
-      controller: _addressController,
-      minLines: 3,
-      maxLines: 5,
-      decoration: _inputDecoration(
-        'Delivery Address',
-      ).copyWith(
-        hintText: _selectedLedger == null
-            ? 'Select a Client / Ledger to auto-fill address'
-            : 'Enter delivery address',
-        alignLabelWithHint: true,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Delivery Address',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        _textField(
+          controller: _address1Controller,
+          label: 'Address Line 1',
+          hint: _selectedLedger == null
+              ? 'Select a Client / Ledger to auto-fill, or type here'
+              : 'Enter address line 1',
+        ),
+
+        const SizedBox(height: 12),
+
+        _textField(
+          controller: _address2Controller,
+          label: 'Address Line 2',
+          hint: 'Enter address line 2 (optional)',
+        ),
+
+        const SizedBox(height: 12),
+
+        _textField(
+          controller: _address3Controller,
+          label: 'Address Line 3',
+          hint: 'Enter address line 3 (optional)',
+        ),
+      ],
     );
   }
 
@@ -1132,6 +1396,12 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
 
     bool isDryMix = existingLine?.isDryMix ?? false;
 
+    // Inline validation message shown INSIDE the dialog. A SnackBar
+    // triggered from the dialog's own context can render underneath
+    // the modal barrier and look like nothing happened, so we show
+    // errors as a banner inside the dialog instead.
+    String? formError;
+
     final result =
         await showDialog<SampleRequestLineModel>(
       context: context,
@@ -1243,6 +1513,51 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
                       ),
 
                       const SizedBox(height: 4),
+
+                      if (formError != null)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(
+                            bottom: 12,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius:
+                                BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.red.shade200,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red.shade700,
+                                size: 18,
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              Expanded(
+                                child: Text(
+                                  formError!,
+                                  style: TextStyle(
+                                    color: Colors.red.shade700,
+                                    fontSize: 13,
+                                    fontWeight:
+                                        FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                       Flexible(
                         child: SingleChildScrollView(
@@ -1564,10 +1879,10 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
                               onPressed: () {
                                 if (selectedProduct ==
                                     null) {
-                                  _showDialogMessage(
-                                    dialogContext,
-                                    'Please select a product.',
-                                  );
+                                  setDialogState(() {
+                                    formError =
+                                        'Please select a product.';
+                                  });
                                   return;
                                 }
 
@@ -1588,20 +1903,24 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
                                         0;
 
                                 if (quantity <= 0) {
-                                  _showDialogMessage(
-                                    dialogContext,
-                                    'Please enter a valid quantity.',
-                                  );
+                                  setDialogState(() {
+                                    formError =
+                                        'Please add a quantity greater than 0.';
+                                  });
                                   return;
                                 }
 
                                 if (rate < 0) {
-                                  _showDialogMessage(
-                                    dialogContext,
-                                    'Please enter a valid rate.',
-                                  );
+                                  setDialogState(() {
+                                    formError =
+                                        'Please enter a valid rate.';
+                                  });
                                   return;
                                 }
+
+                                setDialogState(() {
+                                  formError = null;
+                                });
 
                                 Navigator.of(
                                   dialogContext,
@@ -1662,13 +1981,20 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
       },
     );
 
-    quantityController.dispose();
-    rateController.dispose();
-    notesController.dispose();
+   if (!mounted) {
+  return;
+}
 
-    if (result == null || !mounted) {
-      return;
-    }
+if (result == null) {
+  return;
+}
+
+// Dispose only after Flutter has completed the dialog frame.
+WidgetsBinding.instance.addPostFrameCallback((_) {
+  quantityController.dispose();
+  rateController.dispose();
+  notesController.dispose();
+});
 
     setState(() {
       if (index != null &&
@@ -1679,26 +2005,6 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
         _productLines.add(result);
       }
     });
-  }
-
-  // ==========================================================
-  // DIALOG MESSAGE
-  // ==========================================================
-
-  void _showDialogMessage(
-    BuildContext dialogContext,
-    String message,
-  ) {
-    ScaffoldMessenger.maybeOf(
-      dialogContext,
-    )
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
   }
 
   // ==========================================================
@@ -1993,24 +2299,27 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
                           ),
                         )
                       : ElevatedButton(
-                          onPressed:
-                              _validateBeforeSave,
-                          style:
-                              ElevatedButton.styleFrom(
-                            backgroundColor:
-                                primaryColor,
-                            foregroundColor:
-                                Colors.white,
-                            padding:
-                                const EdgeInsets
-                                    .symmetric(
-                              vertical: 12,
-                            ),
-                          ),
-                          child: const Text(
-                            'Save Request',
+                        onPressed: _isSaving ? null : _validateBeforeSave,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
                           ),
                         ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Save Request',
+                              ),
+  ),
                 ),
               ],
             )
@@ -2057,25 +2366,30 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
                           Colors.white,
                     ),
                   )
-                else
-                  ElevatedButton.icon(
-                    onPressed:
-                        _validateBeforeSave,
-                    icon: const Icon(
-                      Icons.save_outlined,
-                      size: 18,
-                    ),
-                    label: const Text(
-                      'Save Request',
-                    ),
-                    style:
-                        ElevatedButton.styleFrom(
-                      backgroundColor:
-                          primaryColor,
-                      foregroundColor:
-                          Colors.white,
-                    ),
-                  ),
+               else
+                      ElevatedButton.icon(
+                        onPressed: _isSaving ? null : _validateBeforeSave,
+                        icon: _isSaving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.save_outlined,
+                                size: 18,
+                              ),
+                        label: Text(
+                          _isSaving ? 'Saving...' : 'Save Request',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
               ],
             ),
     );
@@ -2158,14 +2472,14 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
         return false;
       }
 
-      if (_siteController.text.trim().isEmpty) {
+      if (_selectedSite == null) {
         _showMessage(
-          'Please enter Site.',
+          'Please select or add a Site.',
         );
         return false;
       }
 
-      if (_addressController.text.trim().isEmpty) {
+      if (_address1Controller.text.trim().isEmpty) {
         _showMessage(
           'Please enter Delivery Address.',
         );
@@ -2188,7 +2502,11 @@ class _SampleRequestScreenState extends State<SampleRequestScreen>
 
     return true;
   }
+  bool _isSaving = false;
+
 Future<void> _validateBeforeSave() async {
+  if (_isSaving) return; // block double-tap / re-entry
+
   // Validate Information tab without changing tabs
   if (!_validateInformationTab()) {
     return;
@@ -2204,8 +2522,9 @@ Future<void> _validateBeforeSave() async {
     return;
   }
 
-  // Only move to Products tab AFTER validation is complete.
   if (!mounted) return;
+
+  setState(() => _isSaving = true);
 
   _tabController.animateTo(2);
 
@@ -2218,7 +2537,6 @@ Future<void> _validateBeforeSave() async {
 
   await _saveSampleRequest();
 }
-
 // ==========================================================
 // VALIDATE INFORMATION TAB
 // ==========================================================
@@ -2293,9 +2611,9 @@ bool _validateSiteDetailsTab() {
     return false;
   }
 
-  if (_siteController.text.trim().isEmpty) {
+  if (_selectedSite == null) {
     _showMessage(
-      'Please enter Site.',
+      'Please select or add a Site.',
     );
 
     if (mounted) {
@@ -2305,7 +2623,7 @@ bool _validateSiteDetailsTab() {
     return false;
   }
 
-  if (_addressController.text.trim().isEmpty) {
+  if (_address1Controller.text.trim().isEmpty) {
     _showMessage(
       'Please enter Delivery Address.',
     );
@@ -2373,7 +2691,7 @@ Map<String, dynamic> _buildSampleRequestBody() {
           line.quantity,
 
       'UoMCode':
-          line.unit?.code ??
+          line.unit?.name ??
           line.product?.uomCode ??
           '',
 
@@ -2420,7 +2738,7 @@ Map<String, dynamic> _buildSampleRequestBody() {
         _selectedLedger?.name ?? '',
 
     'Site':
-        _siteController.text.trim(),
+        _selectedSite?.name ?? '',
 
     'Reference':
         _referenceController.text.trim(),
@@ -2438,13 +2756,13 @@ Map<String, dynamic> _buildSampleRequestBody() {
 
     'DeliveryAddress': {
       'Address1':
-          _addressController.text.trim(),
+          _address1Controller.text.trim(),
 
       'Address2':
-          '',
+          _address2Controller.text.trim(),
 
       'Address3':
-          '',
+          _address3Controller.text.trim(),
 
       'ZipCode':
           '',
@@ -2498,6 +2816,7 @@ int _toInt(dynamic value) {
 }
 
 
+
 // ==========================================================
 // SAVE SAMPLE REQUEST
 // ==========================================================
@@ -2519,7 +2838,7 @@ Future<void> _saveSampleRequest() async {
   print('================================================');
   print('');
 
-  LoaderService.show(
+  final loaderToken = LoaderService.showTracked(
     context,
     title: 'Saving Sample Request',
     subtitle: 'Please wait...',
@@ -2529,46 +2848,46 @@ Future<void> _saveSampleRequest() async {
     final response = await ApiService.saveSampleRequest(
       userId: widget.userId,
       userPwd: widget.userpwd,
-      
       body: body,
     );
 
     if (!mounted) {
-      LoaderService.hide();
       return;
     }
 
-    LoaderService.hide();
+    LoaderService.hideIfCurrent(loaderToken);
 
-    print(
-      'Sample Request save response: $response',
-    );
+    print('Sample Request save response: $response');
 
     await Future<void>.delayed(
-      const Duration(milliseconds: 50),
+      const Duration(milliseconds: 150),
     );
 
     if (!mounted) {
       return;
     }
 
-    
+    final message = response['Message']?.toString() ?? '';
+
+    final reqNo = message
+        .replaceFirst('Sample Req.', '')
+        .replaceFirst(' saved.', '')
+        .trim();
+
+    _showSuccessMessage(
+      'Your Sample Req. is $reqNo',
+    );
   } catch (e) {
     if (!mounted) {
-      
       return;
     }
 
-    
+    LoaderService.hideIfCurrent(loaderToken);
 
-    LoaderService.hide();
-
-    print(
-      'Sample Request save failed: $e',
-    );
+    print('Sample Request save failed: $e');
 
     await Future<void>.delayed(
-      const Duration(milliseconds: 50),
+      const Duration(milliseconds: 150),
     );
 
     if (!mounted) {
@@ -2576,13 +2895,19 @@ Future<void> _saveSampleRequest() async {
     }
 
     _showMessage(
-      e.toString().replaceFirst(
-        'Exception: ',
-        '',
-      ),
+      e.toString().replaceFirst('Exception: ', ''),
     );
+  } finally {
+    // Only re-enable the Save button once the request has truly
+    // finished — success, failure, or unmounted mid-flight.
+    if (mounted) {
+      setState(() => _isSaving = false);
+    }
   }
 }
+
+
+
 
 // ==========================================================
 // SUCCESS MESSAGE
@@ -3424,12 +3749,21 @@ void _showSuccessMessage(String message) {
       return value.toInt().toString();
     }
 
-    return value
-        .toStringAsFixed(2)
-        .replaceFirst(
-          RegExp(r'\.?0+$'),
-          '',
-        );
+    // Use 4 decimal places so small fractional quantities such as
+    // 0.001 survive formatting instead of rounding away to "0".
+    var formatted = value.toStringAsFixed(4);
+
+    formatted = formatted.replaceFirst(
+      RegExp(r'0+$'),
+      '',
+    );
+
+    formatted = formatted.replaceFirst(
+      RegExp(r'\.$'),
+      '',
+    );
+
+    return formatted;
   }
 
   String _formatMoney(

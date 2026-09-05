@@ -15,7 +15,7 @@ import '../config/app_config.dart';
 import '../models/dispatch_plan_filter_model.dart' hide ProductModel;
 import '../models/ev_detail_model.dart';
 import '../models/product_model.dart';
-
+import '../models/stock_report_model.dart';
 
 
 class ApiService {
@@ -1164,16 +1164,16 @@ static Future<Map<String, dynamic>> saveSampleRequest({
     final uri = Uri.parse(
       'https://vyaratiles.co.in/API/SampleReq',
     ).replace(
-      queryParameters: {
+     /* queryParameters: {
         'UserID': 'Sys',
-      },
+      }, */
     );
 
     body['UserPwd'] = userPwd;
     body['VerNo'] = AppConfig.verNo;
 
     print('================ SAMPLE REQUEST POST ================');
-    print('URL: $uri');
+    print('URL: https://vyaratiles.co.in/API/SampleReq');
     print('BODY: ${jsonEncode(body)}');
 
     final response = await http.post(
@@ -1244,6 +1244,147 @@ static Future<Map<String, dynamic>> saveSampleRequest({
 
     throw Exception(
       'Unable to save Sample Request: $e',
+    );
+  }
+}
+
+// ===============================
+// PATCH: api_services.dart
+// ===============================
+//
+// Two changes needed in your existing api_services.dart:
+//
+// 1) Add this import near the top with the other model imports:
+//
+//      import '../models/stock_report_models.dart';
+//
+// 2) Replace the existing getStockReportFilters() method (the one at the
+//    bottom of the file, under "STOCK REPORT FILTER API") with the version
+//    below. Same URL, same param names, same error handling pattern as the
+//    rest of the file — the only change is that it now returns a typed
+//    StockReportFilterModel instead of a raw Map<String, dynamic>.
+
+static Future<StockReportFilterModel> getStockReportFilters(
+  String userId,
+  String userPwd,
+) async {
+  try {
+    final url =
+        "${baseUrl}MktLotStockRptFilter"
+        "?UserID=${Uri.encodeComponent(userId)}"
+        "&UserPwd=${Uri.encodeComponent(userPwd)}"
+        "&VerNo=${AppConfig.verNo}";
+
+    print("========================================");
+    print("STOCK REPORT FILTER API");
+    print("USER ID => $userId");
+    print("VER NO => ${AppConfig.verNo}");
+    print("========================================");
+
+    final response = await http.get(
+      Uri.parse(url),
+    );
+
+    print(
+      "STOCK REPORT FILTER STATUS => ${response.statusCode}",
+    );
+
+    print(
+      "STOCK REPORT FILTER RESPONSE => ${response.body}",
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        "Stock Report Filter API failed: "
+        "HTTP ${response.statusCode}",
+      );
+    }
+
+    final Map<String, dynamic> data =
+        jsonDecode(response.body);
+
+    if (data["StatusCode"] != 200) {
+      throw Exception(
+        data["Message"] ??
+            "Failed to load Stock Report filters.",
+      );
+    }
+
+    return StockReportFilterModel.fromJson(data);
+  } catch (e) {
+    print(
+      "STOCK REPORT FILTER ERROR => $e",
+    );
+
+    throw Exception(
+      e.toString().replaceFirst(
+        "Exception: ",
+        "",
+      ),
+    );
+  }
+}
+
+static Future<String> generateStockReport({
+  required String userId,
+  required String userPwd,
+  required int locId,
+  required int productGroupId,
+  required int productId,
+  int eqTypeId = 0,
+  int secMixTypeId = 0,
+}) async {
+  try {
+    final url = "${baseUrl}MktLotStockRpt";
+ 
+    final body = {
+      "EqTypeID": eqTypeId,
+      "LocID": locId,
+      "ProductGroupID": productGroupId,
+      "ProductID": productId,
+      "SecMixTypeID": secMixTypeId,
+      "UserID": userId,
+      "UserPwd": userPwd,
+      "VerNo": AppConfig.verNo,
+    };
+ 
+    print("================================");
+    print("STOCK REPORT GENERATE API");
+    print("URL => $url");
+    print("BODY => ${jsonEncode(body)}");
+    print("================================");
+ 
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(body),
+    );
+ 
+    print("STOCK REPORT GENERATE STATUS => ${response.statusCode}");
+    print("STOCK REPORT GENERATE RESPONSE => ${response.body}");
+ 
+    final data = jsonDecode(response.body);
+ 
+    if (response.statusCode == 200 && data["StatusCode"] == 200) {
+      final pdfUrl = (data["Message"] ?? "").toString().trim();
+ 
+      if (pdfUrl.isEmpty) {
+        throw Exception("Report generated but PDF path is empty.");
+      }
+ 
+      return pdfUrl;
+    }
+ 
+    throw Exception(
+      (data["Message"] ?? "Failed to generate Stock Report").toString(),
+    );
+  } catch (e) {
+    print("STOCK REPORT GENERATE ERROR => $e");
+ 
+    throw Exception(
+      e.toString().replaceFirst("Exception: ", ""),
     );
   }
 }

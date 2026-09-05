@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:vyara_erp/screens/so_module_screen.dart';
+import 'package:vyara_erp/screens/stock_report_Screen.dart';
 import 'dart:async';
 import 'dart:io';
 import 'login_screen.dart';
@@ -20,7 +21,8 @@ import '../PrevMnt/services/PrevMnt_api_services.dart';
 import '../PrevMnt/screens/PrevMntHomeScreen.dart';
 import '../widgets/no_internet_screen.dart';
 import '../screens/sample_request_screen.dart';
-import '../config/app_config.dart';
+import '../screens/stock_report_Screen.dart';
+
 
 
 
@@ -356,6 +358,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "mnuProdSOAppr": true,
       "mnuProdMastProdInfo": true,
       "mnusampleReqClient": true,
+      "mnuProdLotStockInfo": true,
 
       // =========================
       // SAMPLE REQUEST
@@ -869,13 +872,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // =====================================================
       // SAMPLE REQUEST
       // =====================================================
-/*
+
       "mnuSamplesReqClient": {
         "title": "Sample Request",
         "subtitle": "Request Samples",
         "icon": Icons.inventory_outlined,
         "color": const Color(0xFFEC4899),
-      }, */
+      }, 
+
+        "mnuProdLotStockInfo": {
+        "title": "Stock Report",
+        "subtitle": "Avail. Stock Info",
+        "icon": Icons.bar_chart_outlined,
+        "color": const Color(0xFF00897B)
+,
+      }, 
+
     };
 
     final item = map[cleanMenu];
@@ -914,7 +926,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) =>
-                    const SOModuleScreen(),
+                   const SOModuleScreen(),
+                    //const StockReportScreen(),
               ),
             );
             break;
@@ -985,7 +998,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   });
   break;
-
           // =================================================
           // SAMPLE REQUEST
           // =================================================
@@ -1008,6 +1020,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   });
   break; 
+
+  case "mnuProdLotStockInfo":
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    const StockReportScreen(),
+              ),
+            );
+            break;
+
 
           default:
             debugPrint(

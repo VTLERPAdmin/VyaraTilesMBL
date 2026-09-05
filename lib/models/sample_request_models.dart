@@ -78,6 +78,22 @@ class SampleRequestAddressModel {
     );
   }
 
+  factory SampleRequestAddressModel.empty() {
+    return SampleRequestAddressModel(
+      address1: "",
+      address2: "",
+      address3: "",
+      zipCode: "",
+      disposedValue: false,
+      city: "",
+      state: "",
+      stateCode: "",
+      country: "",
+      cityId: 0,
+      stateId: 0,
+    );
+  }
+
   String get fullAddress {
     return [
       address1,
@@ -95,6 +111,55 @@ class SampleRequestAddressModel {
 
 
 // ============================================================
+// SITE
+// ============================================================
+
+class SampleRequestSiteModel {
+  final String id;
+  final String name;
+
+  // true when the site was created locally by the user and has
+  // not yet been confirmed/saved by the backend.
+  final bool isNew;
+
+  SampleRequestSiteModel({
+    required this.id,
+    required this.name,
+    this.isNew = false,
+  });
+
+  factory SampleRequestSiteModel.fromJson(dynamic json) {
+    if (json is Map) {
+      final map = Map<String, dynamic>.from(json);
+
+      return SampleRequestSiteModel(
+        id: _toString(
+          map["ID"] ??
+              map["_ID"] ??
+              map["SiteID"] ??
+              map["Id"],
+        ),
+        name: _toString(
+          map["Name"] ??
+              map["_Name"] ??
+              map["SiteName"] ??
+              map["Site"],
+        ),
+      );
+    }
+
+    // Some APIs may just return a flat list of site name strings.
+    final value = _toString(json);
+
+    return SampleRequestSiteModel(
+      id: value,
+      name: value,
+    );
+  }
+}
+
+
+// ============================================================
 // LEDGER / CLIENT
 // ============================================================
 
@@ -103,15 +168,23 @@ class SampleRequestLedgerModel {
   final String name;
   final SampleRequestAddressModel address;
 
-  // The supplied API currently returns Sites as [].
-  // Keep it dynamic until the API gives us actual Site objects.
-  final List<dynamic> sites;
+  final List<SampleRequestSiteModel> sites;
+
+  // true when this ledger/client was created locally by the user
+  // (typed a new name) and has not yet been saved by the backend.
+  final bool isNew;
+
+  // internal marker used only inside the dropdown's item list to
+  // represent the synthetic "Add new client" row. Never a real ledger.
+  final bool isAddNewPlaceholder;
 
   SampleRequestLedgerModel({
     required this.id,
     required this.name,
     required this.address,
     required this.sites,
+    this.isNew = false,
+    this.isAddNewPlaceholder = false,
   });
 
   factory SampleRequestLedgerModel.fromJson(
@@ -122,15 +195,45 @@ class SampleRequestLedgerModel {
             ? json["Address"] as Map<String, dynamic>
             : <String, dynamic>{};
 
+    final rawSites = json["Sites"];
+
     return SampleRequestLedgerModel(
       id: _toString(json["ID"]),
       name: _toString(json["Name"]),
       address: SampleRequestAddressModel.fromJson(
         addressJson,
       ),
-      sites: json["Sites"] is List
-          ? List<dynamic>.from(json["Sites"])
-          : <dynamic>[],
+      sites: rawSites is List
+          ? rawSites
+              .map(
+                (e) => SampleRequestSiteModel.fromJson(e),
+              )
+              .toList()
+          : <SampleRequestSiteModel>[],
+    );
+  }
+
+  /// Creates a brand-new, locally-added client from typed text.
+  /// Not yet known to the backend -- `id` is a temporary local id.
+  factory SampleRequestLedgerModel.newClient(String name) {
+    return SampleRequestLedgerModel(
+      id: "NEW-${DateTime.now().millisecondsSinceEpoch}",
+      name: name,
+      address: SampleRequestAddressModel.empty(),
+      sites: <SampleRequestSiteModel>[],
+      isNew: true,
+    );
+  }
+
+  /// Synthetic "Add "<query>" as new client" row shown at the
+  /// bottom of the dropdown list when there is no exact match.
+  factory SampleRequestLedgerModel.addNewPlaceholder(String query) {
+    return SampleRequestLedgerModel(
+      id: "__ADD_NEW__",
+      name: 'Add "$query" as new client',
+      address: SampleRequestAddressModel.empty(),
+      sites: <SampleRequestSiteModel>[],
+      isAddNewPlaceholder: true,
     );
   }
 }

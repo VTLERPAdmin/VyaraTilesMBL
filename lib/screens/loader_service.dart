@@ -2,90 +2,138 @@ import 'package:flutter/material.dart';
 import 'package:vyara_erp/widgets/loader.dart';
 
 class LoaderService {
-  static OverlayEntry? _overlay;
-
-  // Each show() call gets a unique token. hide() only clears the overlay
-  // if it's still the one that matches the token it was shown with — this
-  // stops a late-arriving hide() from one screen accidentally removing a
-  // newer loader that a different screen has since shown.
+  static OverlayEntry? _overlayEntry;
   static int _token = 0;
+  static int? _activeToken;
+
+  // ==========================================================
+  // SHOW LOADER
+  // ==========================================================
 
   static void show(
     BuildContext context, {
     required String title,
     required String subtitle,
   }) {
-    hide(); // remove old if exists
+    // Do not use a deactivated context.
+    if (!context.mounted) {
+      return;
+    }
 
-    final overlayState = Overlay.of(context, rootOverlay: true);
+    // Remove any existing loader first.
+    hide();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final overlayState = Overlay.maybeOf(
+      context,
+      rootOverlay: true,
+    );
+
+    if (overlayState == null || !overlayState.mounted) {
+      debugPrint('Loader show skipped: Overlay is not available.');
+      return;
+    }
 
     final myToken = ++_token;
 
     final entry = OverlayEntry(
-      builder: (context) => Material(
-        color: Colors.black54,
-        child: Center(
-          child: VyaraLoaderScreen(
-            title: title,
-            subtitle: subtitle,
+      builder: (BuildContext overlayContext) {
+        return Material(
+          color: Colors.black54,
+          child: Center(
+            child: VyaraLoaderScreen(
+              title: title,
+              subtitle: subtitle,
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
-    _overlay = entry;
+    _overlayEntry = entry;
+    _activeToken = myToken;
 
     try {
       overlayState.insert(entry);
     } catch (e) {
-      debugPrint("Loader show error: $e");
-      // Insert failed (e.g. overlay state no longer valid) — don't leave
-      // a dangling reference that a later hide() would try to remove.
-      if (_overlay == entry) {
-        _overlay = null;
+      debugPrint('Loader show error: $e');
+
+      if (_overlayEntry == entry) {
+        _overlayEntry = null;
+        _activeToken = null;
       }
-      return;
-    }
-
-    // If show() raced with another show()/hide() while we were inserting,
-    // _token may have moved on; that's fine, _token always reflects the
-    // most recent caller.
-    _activeToken = myToken;
-  }
-
-  static int? _activeToken;
-
-  static void hide() {
-    if (_overlay == null) return;
-
-    try {
-      _overlay?.remove();
-    } catch (e) {
-      debugPrint("Loader hide error: $e");
-    } finally {
-      _overlay = null;
-      _activeToken = null;
     }
   }
 
-  /// Like hide(), but only removes the overlay if the caller's screen is
-  /// still the most recent one to have called show(). Pass the token
-  /// returned by showTracked() to use this safely across async gaps.
-  static void hideIfCurrent(int token) {
-    if (_activeToken == token) {
-      hide();
-    }
-  }
+  // ==========================================================
+  // SHOW WITH TOKEN
+  // ==========================================================
 
-  /// Same as show(), but returns a token you can hand to hideIfCurrent()
-  /// in a finally block, so a late hide() from a stale screen can't
-  /// remove a newer loader shown by a different screen in the meantime.
   static int showTracked(
     BuildContext context, {
     required String title,
     required String subtitle,
   }) {
-    show(context, title: title, subtitle: subtitle);
+    show(
+      context,
+      title: title,
+      subtitle: subtitle,
+    );
+
     return _activeToken ?? _token;
+  }
+
+  // ==========================================================
+  // HIDE LOADER
+  // ==========================================================
+
+  static void hide() {
+    final entry = _overlayEntry;
+
+    // Clear references FIRST.
+    //
+    // This is important because remove() can cause widget rebuilds and
+    // disposal work. We don't want another callback to try removing the
+    // same OverlayEntry again.
+    _overlayEntry = null;
+    _activeToken = null;
+
+    if (entry == null) {
+      return;
+    }
+
+    // Only remove if the entry is actually mounted.
+    if (!entry.mounted) {
+      return;
+    }
+
+    try {
+      entry.remove();
+    } catch (e) {
+      debugPrint('Loader hide error: $e');
+    }
+  }
+
+  // ==========================================================
+  // HIDE ONLY IF THIS IS THE CURRENT LOADER
+  // ==========================================================
+
+  static void hideIfCurrent(int token) {
+    if (_activeToken != token) {
+      return;
+    }
+
+    hide();
+  }
+
+  // ==========================================================
+  // CHECK IF LOADER IS VISIBLE
+  // ==========================================================
+
+  static bool get isShowing {
+    return _overlayEntry?.mounted ?? false;
   }
 }
