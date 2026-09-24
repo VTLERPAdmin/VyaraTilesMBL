@@ -23,9 +23,6 @@ import '../widgets/no_internet_screen.dart';
 import '../screens/sample_request_screen.dart';
 import '../screens/stock_report_Screen.dart';
 
-
-
-
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 

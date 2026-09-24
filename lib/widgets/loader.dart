@@ -87,7 +87,7 @@ class _VyaraLoaderScreenState extends State<VyaraLoaderScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                    Color(0xFF1F4E8C),
+                    Color.fromARGB(255, 8, 35, 71),
                     Color(0xFF0A3A80),
                     Color(0xFF082C61),
                     Color(0xFF061A3A),
