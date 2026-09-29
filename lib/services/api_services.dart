@@ -16,6 +16,7 @@ import '../models/dispatch_plan_filter_model.dart' hide ProductModel;
 import '../models/ev_detail_model.dart';
 import '../models/product_model.dart';
 import '../models/stock_report_model.dart';
+import '../models/sale_quotation_model.dart';
 
 
 class ApiService {
@@ -1388,4 +1389,122 @@ static Future<String> generateStockReport({
     );
   }
 }
+
+
+// ===============================
+// PATCH: api_services.dart
+// ===============================
+//
+// 1) Add this import near the top with the other model imports:
+//
+//      import '../models/sale_quotation_model.dart';
+//
+// 2) Add these two methods anywhere inside the ApiService class.
+
+// ------------------------------------------------------------
+// SALE QUOTATION LIST
+// Endpoint: GET https://vyaratiles.co.in/Api/QuotList
+// Returns: MktPersons[], Clients[], Sites[], QuotList[], StatusCode, Message
+// ------------------------------------------------------------
+static Future<QuotListModel> getQuotList({
+  required String userId,
+  required String userPwd,
+}) async {
+  try {
+    final uri = Uri.parse("${baseUrl}QuotList").replace(
+      queryParameters: {
+        "UserID": userId,
+        "UserPwd": userPwd,
+        "VerNo": AppConfig.verNo.toString(),
+      },
+    );
+
+    print("========================================");
+    print("QUOTATION LIST API");
+    print("USER ID => $userId");
+    print("========================================");
+
+    final response = await http.get(uri);
+
+    print("QUOTATION LIST STATUS => ${response.statusCode}");
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        "Quotation List API failed: HTTP ${response.statusCode}",
+      );
+    }
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    if (data["StatusCode"] != 200) {
+      throw Exception(
+        data["Message"] ?? "Failed to load quotations.",
+      );
+    }
+
+    return QuotListModel.fromJson(data);
+  } catch (e) {
+    print("QUOTATION LIST ERROR => $e");
+    throw Exception(
+      e.toString().replaceFirst("Exception: ", ""),
+    );
+  }
+}
+
+// ------------------------------------------------------------
+// SALE QUOTATION PRINT
+// Endpoint: GET https://vyaratiles.co.in/Api/QuotPrint
+// Query: UserID, UserPwd, VerNo, LocID, ID, SaleType
+// Response: { "StatusCode": 200, "Message": "<PDF URL>" }
+// ------------------------------------------------------------
+static Future<String> getQuotPrint({
+  required String userId,
+  required String userPwd,
+  required int locId,
+  required int id,
+  required int saleType,
+}) async {
+  try {
+    final uri = Uri.parse("${baseUrl}QuotPrint").replace(
+      queryParameters: {
+        "UserID": userId,
+        "UserPwd": userPwd,
+        "VerNo": AppConfig.verNo.toString(),
+        "LocID": locId.toString(),
+        "ID": id.toString(),
+        "SaleType": saleType.toString(),
+      },
+    );
+
+    print("========================================");
+    print("QUOTATION PRINT API");
+    print("URL => $uri");
+    print("========================================");
+
+    final response = await http.get(uri);
+    final data = jsonDecode(response.body);
+
+    print("QUOTATION PRINT RESPONSE => ${response.body}");
+
+    if (response.statusCode == 200 && data["StatusCode"] == 200) {
+      final pdfUrl = (data["Message"] ?? "").toString().trim();
+
+      if (pdfUrl.isEmpty) {
+        throw Exception("Quotation generated but PDF path is empty.");
+      }
+
+      return pdfUrl;
+    }
+
+    throw Exception(
+      (data["Message"] ?? "Failed to generate Quotation PDF").toString(),
+    );
+  } catch (e) {
+    print("QUOTATION PRINT ERROR => $e");
+    throw Exception(
+      e.toString().replaceFirst("Exception: ", ""),
+    );
+  }
+}
+
 }

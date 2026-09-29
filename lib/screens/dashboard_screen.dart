@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:vyara_erp/models/sale_quotation_model.dart';
 import 'package:vyara_erp/screens/so_module_screen.dart';
 import 'package:vyara_erp/screens/stock_report_Screen.dart';
 import 'dart:async';
@@ -21,7 +22,7 @@ import '../PrevMnt/services/PrevMnt_api_services.dart';
 import '../PrevMnt/screens/PrevMntHomeScreen.dart';
 import '../widgets/no_internet_screen.dart';
 import '../screens/sample_request_screen.dart';
-import '../screens/stock_report_Screen.dart';
+import '../screens/sale_quotation_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -356,10 +357,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "mnuProdMastProdInfo": true,
       "mnusampleReqClient": true,
       "mnuProdLotStockInfo": true,
-
-      // =========================
-      // SAMPLE REQUEST
-      // =========================
+      "mnuProdSQuotTInc":true,
       "mnuSamplesReqClient": true,
     };
 
@@ -881,9 +879,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "title": "Stock Report",
         "subtitle": "Avail. Stock Info",
         "icon": Icons.bar_chart_outlined,
-        "color": const Color(0xFF00897B)
-,
+        "color": const Color(0xFF00897B),
       }, 
+
+       "mnuProdSQuotTInc": {
+        "title": "Sale Quotation",
+        "subtitle": "View Quotations",       
+        "icon": Icons.description_outlined,
+        "color": const Color(0xFF2563EB),
+       },
+
 
     };
 
@@ -1017,6 +1022,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   });
   break; 
+
+
+      case "mnuProdSQuotTInc":
+  SessionManager.getSession().then((session) {
+    if (session == null) return;
+
+    final userId = session["userId"] ?? "";
+    final userPwd = session["password"] ?? "";
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SaleQuotationScreen(
+         
+        ),
+      ),
+    );
+  });
+  break; 
+
 
   case "mnuProdLotStockInfo":
             Navigator.push(
