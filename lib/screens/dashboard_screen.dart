@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'package:vyara_erp/models/sale_quotation_model.dart';
+import 'package:vyara_erp/screens/credit_limit_screen.dart';
 import 'package:vyara_erp/screens/so_module_screen.dart';
 import 'package:vyara_erp/screens/stock_report_Screen.dart';
 import 'dart:async';
@@ -359,6 +359,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "mnuProdLotStockInfo": true,
       "mnuProdSQuotTInc":true,
       "mnuSamplesReqClient": true,
+      "mnuProdMastCrLimit": true,
     };
 
     final visibleMenus = menus
@@ -874,6 +875,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "icon": Icons.inventory_outlined,
         "color": const Color(0xFFEC4899),
       }, 
+      "mnuProdMastCrLimit": {
+        "title": "Credit Limits",
+        "subtitle": "Temporary Cr.Limits",
+         "icon": Icons.credit_score_outlined,
+        "color": const Color(0xFF0EA5E9),
+      }, 
 
         "mnuProdLotStockInfo": {
         "title": "Stock Report",
@@ -1017,6 +1024,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (_) => SampleRequestScreen(
           userId: userId,
           userpwd: userPwd,
+        ),
+      ),
+    );
+  });
+  break; 
+
+  case "mnuProdMastCrLimit":
+  SessionManager.getSession().then((session) {
+    if (session == null) return;
+
+    final userId = session["userId"] ?? "";
+    final userPwd = session["password"] ?? "";
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreditLimitScreen(
+         
         ),
       ),
     );

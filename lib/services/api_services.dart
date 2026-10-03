@@ -17,6 +17,7 @@ import '../models/ev_detail_model.dart';
 import '../models/product_model.dart';
 import '../models/stock_report_model.dart';
 import '../models/sale_quotation_model.dart';
+import '../models/credit_limit_model.dart';
 
 
 class ApiService {
@@ -1501,6 +1502,116 @@ static Future<String> getQuotPrint({
     );
   } catch (e) {
     print("QUOTATION PRINT ERROR => $e");
+    throw Exception(
+      e.toString().replaceFirst("Exception: ", ""),
+    );
+  }
+}
+
+
+
+// ------------------------------------------------------------
+// TEMPORARY CREDIT LIMITS - LIST
+// Endpoint: GET https://vyaratiles.co.in/Api/CrLimitData
+// Returns: Clients[] (credit-limit records), MktPersons[],
+//          AuthPersons[], StatusCode, Message
+// ------------------------------------------------------------
+static Future<CrLimitDataModel> getCrLimitData({
+  required String userId,
+  required String userPwd,
+}) async {
+  try {
+    final uri = Uri.parse("${baseUrl}CrLimitData").replace(
+      queryParameters: {
+        "UserID": userId,
+        "UserPwd": userPwd,
+        "VerNo": AppConfig.verNo.toString(),
+      },
+    );
+
+    print("========================================");
+    print("CREDIT LIMIT LIST API");
+    print("USER ID => $userId");
+    print("========================================");
+
+    final response = await http.get(uri);
+
+    print("CREDIT LIMIT LIST STATUS => ${response.statusCode}");
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        "Credit Limit List API failed: HTTP ${response.statusCode}",
+      );
+    }
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    if (data["StatusCode"] != 200) {
+      throw Exception(
+        data["Message"] ?? "Failed to load credit limits.",
+      );
+    }
+
+    return CrLimitDataModel.fromJson(data);
+  } catch (e) {
+    print("CREDIT LIMIT LIST ERROR => $e");
+    throw Exception(
+      e.toString().replaceFirst("Exception: ", ""),
+    );
+  }
+}
+
+// ------------------------------------------------------------
+// TEMPORARY CREDIT LIMITS - SAVE
+// Endpoint: POST https://vyaratiles.co.in/Api/CrLimit
+// Sends only the affected credit-limit record in Clients[].
+// ------------------------------------------------------------
+static Future<void> saveCrLimit({
+  required String userId,
+  required String userPwd,
+  required CrLimitRecordModel record,
+}) async {
+  try {
+    final url = Uri.parse("${baseUrl}CrLimit");
+
+    final body = {
+      "UserID": userId,
+      "UserPwd": userPwd,
+      "VerNo": AppConfig.verNo,
+      "id": record.id,     
+      "ClientID": record.clientId,
+      "client": record.client,
+      "CrLimit": record.crLimit,
+      "MktPersonID": record.mktPersonId,
+      "effFrom": formatIsoMidnight(record.effFrom),
+      "effTill": formatIsoMidnight(record.effTill),
+      "crlimitAuthID": record.crLimitAuthId,
+      "crlimitRef": record.crLimitRef,          
+    
+    };
+
+    print("========================================");
+    print("CREDIT LIMIT SAVE API");
+    print("========================================");
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    print("CREDIT LIMIT SAVE STATUS => ${response.statusCode}");
+    print("CREDIT LIMIT SAVE RESPONSE => ${response.body}");
+
+    final data = jsonDecode(response.body);
+
+    if (!(response.statusCode == 200 && data["StatusCode"] == 200)) {
+      throw Exception(
+        (data["Message"] ?? "Failed to save credit limit.").toString(),
+      );
+    }
+  } catch (e) {
+    print("CREDIT LIMIT SAVE ERROR => $e");
     throw Exception(
       e.toString().replaceFirst("Exception: ", ""),
     );
