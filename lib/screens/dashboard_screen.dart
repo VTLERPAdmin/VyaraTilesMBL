@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:vyara_erp/screens/credit_limit_screen.dart';
+import 'package:vyara_erp/screens/inv_print_screen.dart';
 import 'package:vyara_erp/screens/so_module_screen.dart';
 import 'package:vyara_erp/screens/stock_report_Screen.dart';
 import 'dart:async';
@@ -360,6 +361,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "mnuProdSQuotTInc":true,
       "mnuSamplesReqClient": true,
       "mnuProdMastCrLimit": true,
+      "mnuProdSaleUtilsPrintInv": true,
+    
     };
 
     final visibleMenus = menus
@@ -881,6 +884,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
          "icon": Icons.credit_score_outlined,
         "color": const Color(0xFF0EA5E9),
       }, 
+      "mnuProdSaleUtilsPrintInv": {
+       "title": "Inv. Print",
+      "subtitle": "Print Invoices",
+      "icon": Icons.receipt_long_outlined,
+      "color": const Color(0xFF0D9488),
+      }, 
 
         "mnuProdLotStockInfo": {
         "title": "Stock Report",
@@ -1047,6 +1056,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   });
   break; 
+
+ case "mnuProdSaleUtilsPrintInv":
+  SessionManager.getSession().then((session) {
+    if (session == null) return;
+
+    final userId = session["userId"] ?? "";
+    final userPwd = session["password"] ?? "";
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InvPrintScreen(
+         
+        ),
+      ),
+    );
+  });
+  break; 
+
 
 
       case "mnuProdSQuotTInc":

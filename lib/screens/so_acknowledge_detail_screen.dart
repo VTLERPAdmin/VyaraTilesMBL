@@ -5,7 +5,6 @@ import '../models/so_acknowledgement_model.dart';
 import '../services/api_services.dart';
 import '../services/session_manager.dart';
 import '../screens/loader_service.dart';
-import '../config/app_config.dart';
 
 class SOAcknowledgeDetailScreen extends StatefulWidget {
   final SOAcknowledgementModel so;
@@ -48,9 +47,27 @@ class _SOAcknowledgeDetailScreenState extends State<SOAcknowledgeDetailScreen> {
     );
 
     try {
+      final session = await SessionManager.getSession();
+
+      if (session == null) {
+        throw Exception("Session not found. Please login again.");
+      }
+
+      final userId = session["userId"]?.toString() ?? "";
+      final userPwd = session["password"]?.toString() ?? "";
+
+      if (userId.trim().isEmpty || userPwd.trim().isEmpty) {
+        throw Exception("User authentication details are missing.");
+      }
+
+      print(
+        "SO ACK PDF selected => SONo: ${widget.so.soNo}, "
+        "LocID: ${widget.so.locId}, SOID: ${widget.so.soId}",
+      );
+
       final pdfUrl = await ApiService.getSOPdf(
-        userId: "",
-        userPwd: "",
+        userId: userId,
+        userPwd: userPwd,
         locId: widget.so.locId,
         soId: widget.so.soId,
       );
