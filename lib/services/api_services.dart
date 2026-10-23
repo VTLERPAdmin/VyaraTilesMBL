@@ -19,6 +19,7 @@ import '../models/stock_report_model.dart';
 import '../models/sale_quotation_model.dart';
 import '../models/credit_limit_model.dart';
 import '../models/inv_print_model.dart';
+import '../models/movable_asset_model.dart';
 
 class ApiService {
   static const String baseUrl = "https://vyaratiles.co.in/API/";
@@ -1545,6 +1546,270 @@ class ApiService {
       );
     } catch (e) {
       print("INV PRINT REPORT ERROR => $e");
+      throw Exception(e.toString().replaceFirst("Exception: ", ""));
+    }
+  }
+  // ===============================
+  // PATCH: api_services.dart
+  // ===============================
+  //
+  // 1) Make sure this import is near the top with the other model imports:
+  //
+  //      import '../models/movable_asset_model.dart';
+  //
+  // 2) Replace BOTH Movable Asset methods you added earlier with the two
+  //    below (the save method changed completely: new URL, new body).
+  //    `jsonEncode` / `base64Encode` come from dart:convert, which this
+  //    file already imports.
+
+  // ------------------------------------------------------------
+  // MOVABLE ASSET - LOOKUPS
+  // Endpoint: GET https://vyaratiles.co.in/Api/MovableAsset
+  // Returns: LocList[], Client[], Site[], Agencys[], Emps[], Assets[],
+  //          Items[], Taxes[], UOM[], StatusCode, Message
+  // ------------------------------------------------------------
+  static Future<MovableAssetLookups> getMovableAssetData({
+    required String userId,
+    required String userPwd,
+  }) async {
+    try {
+      final uri = Uri.parse("${baseUrl}MovableAsset").replace(
+        queryParameters: {
+          "UserID": userId,
+          "UserPwd": userPwd,
+          "VerNo": AppConfig.verNo.toString(),
+        },
+      );
+
+      print("========================================");
+      print("MOVABLE ASSET LOOKUPS API");
+      print("USER ID => $userId");
+      print("========================================");
+
+      final response = await http.get(uri);
+
+      print("MOVABLE ASSET LOOKUPS STATUS => ${response.statusCode}");
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          "Movable Asset API failed: HTTP ${response.statusCode}",
+        );
+      }
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      if (data["StatusCode"] != 200) {
+        throw Exception(
+          data["Message"] ?? "Failed to load movable asset data.",
+        );
+      }
+
+      return MovableAssetLookups.fromJson(data);
+    } catch (e) {
+      print("MOVABLE ASSET LOOKUPS ERROR => $e");
+      throw Exception(e.toString().replaceFirst("Exception: ", ""));
+    }
+  }
+
+  // ------------------------------------------------------------
+  // MOVABLE ASSET - SAVE
+  // Endpoint: POST https://vyaratiles.co.in/Api/MovableAssetsave
+  //
+  // The header, GSTAmts and the asset row (Details[]) follow your real
+  // sample. These parts are STILL GUESSES (no sample had them filled):
+  //   * the shape of a SubItems[] element (each item under an asset) —
+  //     assumed to mirror the asset row: ItemID, ItemName, HsnCode,
+  //     UoMCode, Qty, Rate, BasicAmt, GST, GrossAmt, Remarks
+  //   * the asset row's own Qty / UoMCode / GST: sent as 1 / "NOS" / an
+  //     empty GST (tax is picked per item in the app)
+  //   * the amount maths (see _gstObj / the totals below)
+  //   * GST.Mode: 12 for an IGST tax, 11 otherwise (inferred from your
+  //     sample: header 11, IGST row 12)
+  //   * the format of AssetImage (assumed: plain base64 text, no
+  //     "data:image/..." prefix)
+  // If a name is wrong the server may ignore it and save a blank value
+  // without an error, so test with a throw-away voucher and check the
+  // saved record in the ERP.
+  //
+  // Returns the text to show the user: the server's "Message", plus
+  // the Vou. No. if the response carries it in a "VouNo" field.
+  // ------------------------------------------------------------
+  static Future<String> saveMovableAsset({
+    required String userId,
+    required String userPwd,
+    required DateTime vouDate,
+    required MaLookupItem? location,
+    required MaLookupItem? client,
+    required MaLookupItem? site,
+    required MaLookupItem? agency,
+    required MaLookupItem emp,
+    required String notes,
+    required List<MaAssetLine> lines,
+  }) async {
+    try {
+      final uri = Uri.parse("${baseUrl}MovableAssetsave").replace(
+        queryParameters: {
+          "UserID": userId,
+          "UserPwd": userPwd,
+          "VerNo": AppConfig.verNo.toString(),
+        },
+      );
+
+      String two(int n) => n.toString().padLeft(2, '0');
+      final vouDateStr =
+          "${two(vouDate.day)}/${two(vouDate.month)}/${vouDate.year}";
+
+     
+
+      Map<String, dynamic> gstObj({
+        int id = 0,
+        String heading = "",
+        double rate = 0,
+        int mode = 11,
+        bool noCalc = false,
+      }) => {
+       
+        "ID": id,
+        
+      };
+
+      // Tax percentage is read from the tax name, e.g. "...-18%)..." -> 18
+      double taxRate(String name) {
+        final m = RegExp(r'(\d+(?:\.\d+)?)\s*%').firstMatch(name);
+        return m == null ? 0.0 : double.tryParse(m.group(1)!) ?? 0.0;
+      }
+
+      final locId = location?.id ?? 0;
+
+      double basicTotal = 0;
+      double grossTotal = 0;
+
+      final details = <Map<String, dynamic>>[];
+
+      for (var i = 0; i < lines.length; i++) {
+        final l = lines[i];
+
+        // Asset row: one unit at the asset's own rate.
+        const assetQty = 1.0;
+        final assetBasic = assetQty * l.asset.rate;
+
+        final subItems = <Map<String, dynamic>>[];
+        double subItemAmt = 0;
+
+        for (var j = 0; j < l.items.length; j++) {
+          final e = l.items[j];
+          final itemBasic = e.qty * e.item.rate;
+          subItemAmt += itemBasic;
+
+          subItems.add({
+            "LocID": locId,
+            "ID": 0,
+            "SrNo": j + 1,
+            "ItemID": e.item.id,
+            "ItemName": e.item.name,
+            "HsnCode": e.hsnCode,
+            "UoMCode": e.uom.name,
+            "Qty": e.qty,
+            "Rate": e.item.rate,
+            "BasicAmt": itemBasic,
+            "GST": gstObj(
+              id: e.tax.id,
+              heading: e.tax.name,
+              rate: taxRate(e.tax.name),
+              mode: e.tax.name.toUpperCase().contains("IGST") ? 12 : 11,
+              noCalc: true,
+            ),
+            "GrossAmt": itemBasic,
+            "Remarks": e.remarks,
+          });
+        }
+
+        final rowGross = assetBasic + subItemAmt;
+        basicTotal += assetBasic;
+        grossTotal += rowGross;
+
+        details.add({
+          "LocID": locId,
+          "ID": 0,
+          "SrNo": i + 1,
+          "AssetID": l.asset.id,
+          "AssetNo": l.asset.assetCode,
+          "AssetName": l.asset.name,
+          "HsnCode": l.hsnCode,
+          "UoMCode": "NOS",
+          "Qty": assetQty,
+          "Rate": l.asset.rate,
+          "BasicAmt": assetBasic,
+          "GST": gstObj(),
+          "GrossAmt": rowGross,
+          "AssetImage": base64Encode(l.photoBytes),
+          "Image": null,
+          "SubItems": subItems,
+          "SubItemAmt": subItemAmt,
+        });
+      }
+
+      final body = {
+        "UserID": userId,
+        "UserPWd": userPwd,
+        "VerNo": AppConfig.verNo,        
+        "VouNo": "", // generated by the server
+        "VouDate": vouDateStr,
+        "ClientID": client?.id ?? 0,
+        "Client": client?.name ?? "",
+        "SiteID": site?.id ?? 0,
+        "AgencyID": agency?.id ?? 0,
+        "Agency": agency?.name ?? "",
+        "RefLocID": location?.id ?? 0,        
+        "EmpID": emp.id,        
+        "VehicleNo": "",
+        "BasicAmt": basicTotal,
+        "GSTAmts": gstObj(),
+        "GrossAmt": grossTotal,
+        "Remarks": notes,
+        "Outwards": true,
+        "Details": details,
+      };
+
+      print("========================================");
+      print("MOVABLE ASSET SAVE API");
+      print("URL => $uri");
+      // The photos are large — log the body without them.
+      print(
+        "BODY (photos hidden) => "
+                "${jsonEncode(body, toEncodable: (o) => o)}"
+            .replaceAll(RegExp(r'"AssetImage":"[^"]*"'), '"AssetImage":"..."'),
+      );
+      print("========================================");
+
+      final response = await http.post(
+        uri,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      print("MOVABLE ASSET SAVE STATUS => ${response.statusCode}");
+      print("MOVABLE ASSET SAVE RESPONSE => ${response.body}");
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data["StatusCode"] == 200) {
+        final message = (data["Message"] ?? "").toString().trim();
+        final vouNo = (data["VouNo"] ?? "").toString().trim();
+
+        if (vouNo.isNotEmpty && !message.contains(vouNo)) {
+          return message.isEmpty
+              ? "Vou. No.: $vouNo"
+              : "$message\nVou. No.: $vouNo";
+        }
+        return message;
+      }
+
+      throw Exception(
+        (data["Message"] ?? "Failed to save movable asset.").toString(),
+      );
+    } catch (e) {
+      print("MOVABLE ASSET SAVE ERROR => $e");
       throw Exception(e.toString().replaceFirst("Exception: ", ""));
     }
   }

@@ -168,9 +168,10 @@ class DispatchPlanDetailModel {
   final String finish;
   final String lotNo;
   final double maxPlanQty;
-
+  
   final int dispatchLocId;
   final int planLocId;
+  
   final int soLocId;
   final int soId;
   final int soSrNo;
@@ -255,6 +256,7 @@ class DispatchPlanDetailModel {
       maxPlanQty: _d(json["MaxPlanQty"]),
       dispatchLocId: _i(json["DispatchLocID"]),
       planLocId: _i(json["PlanLocID"]),
+      
       soLocId: _i(json["SOLocID"]),
       soId: _i(json["SOID"]),
       soSrNo: _i(json["SOSrNo"]),
