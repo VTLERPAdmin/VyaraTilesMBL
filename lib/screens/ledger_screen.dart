@@ -1,11 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:printing/printing.dart';
 import '../screens/loader_service.dart';
 import '../models/ledger_model.dart';
 import '../services/api_services.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import '../services/session_manager.dart';
 import '../config/app_config.dart';
+
 
 class LedgerScreen extends StatefulWidget {
   const LedgerScreen({super.key});
@@ -343,77 +345,105 @@ Future<void> openClientSelector() async {
 }
 
   // ================= GENERATE REPORT =================
+    // ================= GENERATE REPORT =================
   Future generateReport() async {
-  if (selectedClients.isEmpty) {
-    showError("Please select client");
-    return;
-  }
-
-  if (fromDateController.text.isEmpty ||
-      toDateController.text.isEmpty) {
-    showError("Please select dates");
-    return;
-  }
-
-  setState(() {
-    generating = true;
-  });
-
-   LoaderService.show(
-    context,
-    title: "Generating Ledger",
-    subtitle: "Preparing your report...",
-  );
-
-  try {
-    final clientIds =
-        selectedClients.map((e) => e.id).join(",");
-
-    print("================================");
-    print("GENERATING LEDGER");
-    print("UserID => $userId");
-    print("ClientIDs => $clientIds");
-    print("FromDate => ${fromDateController.text}");
-    print("ToDate => ${toDateController.text}");
-    print("MergeClients => $mergeClients");
-    print("GrandTotal => $grandTotal");
-    print("================================");
-
-    final pdfUrl = await ApiService.getLedgerReport(
-      clientIds: clientIds,
-      fromDate: fromDateController.text,
-      toDate: toDateController.text,
-      mergeClients: mergeClients,
-      grandTotal: grandTotal,
-      userId: userId,
-      userPwd: userpwd,
-      
-    );
-
-    print("PDF URL => $pdfUrl");
-
-    if (pdfUrl.toString().isEmpty) {
-      throw Exception("PDF path is empty");
+    if (selectedClients.isEmpty) {
+      showError("Please select client");
+      return;
     }
 
-    await launchUrl(
-      Uri.parse(pdfUrl.toString()),
-      mode: LaunchMode.externalApplication,
+    if (fromDateController.text.isEmpty ||
+        toDateController.text.isEmpty) {
+      showError("Please select dates");
+      return;
+    }
+
+    setState(() {
+      generating = true;
+    });
+
+    LoaderService.show(
+      context,
+      title: "Generating Ledger",
+      subtitle: "Preparing your report...",
     );
-  } catch (e) {
-    showError(e.toString());
-  } finally {
-    if (mounted) {
 
-      LoaderService.hide();
-      setState(() {
-        generating = false;
+    // Make sure the loader is hidden exactly once.
+    bool loaderShown = true;
+    void hideLoader() {
+      if (loaderShown) {
+        loaderShown = false;
+        LoaderService.hide();
+      }
+    }
 
-       
-      });
+    try {
+      final clientIds = selectedClients.map((e) => e.id).join(",");
+
+      print("================================");
+      print("GENERATING LEDGER");
+      print("UserID => $userId");
+      print("ClientIDs => $clientIds");
+      print("FromDate => ${fromDateController.text}");
+      print("ToDate => ${toDateController.text}");
+      print("MergeClients => $mergeClients");
+      print("GrandTotal => $grandTotal");
+      print("================================");
+
+      // The API returns the PDF file itself (bytes), not a URL.
+      final pdfBytes = await ApiService.getLedgerReport(
+        clientIds: clientIds,
+        fromDate: fromDateController.text,
+        toDate: toDateController.text,
+        mergeClients: mergeClients,
+        grandTotal: grandTotal,
+        userId: userId,
+        userPwd: userpwd,
+      );
+
+      hideLoader();
+
+      if (!mounted) return;
+
+      final from = fromDateController.text.replaceAll("/", "-");
+      final to = toDateController.text.replaceAll("/", "-");
+
+      // Show the PDF inside the app (Android, iOS and Chrome).
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF06224D),
+              iconTheme: const IconThemeData(color: Colors.white),
+              title: const Text(
+                "Ledger Report",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+            body: PdfPreview(
+              build: (_) async => pdfBytes,
+              pdfFileName: "Ledger_${from}_to_$to.pdf",
+              canChangePageFormat: false,
+              canChangeOrientation: false,
+              canDebug: false,
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      hideLoader();
+      if (mounted) {
+        showError(e.toString().replaceFirst("Exception: ", ""));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          generating = false;
+        });
+      }
     }
   }
-}
   // ================= ERROR DIALOG =================
   void showError(String message) {
     showDialog(

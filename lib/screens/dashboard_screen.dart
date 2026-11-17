@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:vyara_erp/screens/credit_limit_screen.dart';
 import 'package:vyara_erp/screens/inv_print_screen.dart';
+import 'package:vyara_erp/screens/movable_asset_hub_screen.dart';
 import 'package:vyara_erp/screens/movable_asset_screen.dart';
 import 'package:vyara_erp/screens/so_module_screen.dart';
 import 'package:vyara_erp/screens/stock_report_Screen.dart';
@@ -248,7 +249,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 12),
 
                 Text(
-                  "Do you want to logou as\n$userName ?",
+                  "Do you want to logout as\n$userName ?",
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 15,
@@ -834,13 +835,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "icon": Icons.analytics_outlined,
         "color": const Color(0xFF0891B2),
       },
-      "mnuAcAssetsMovable": {
-  "title": "Movable Assets",
-  "subtitle": "Asset Register",
-  //"icon": Icons.inventory_2_outlined,
-  "icon": Icons.precision_manufacturing_outlined,
-  "color": const Color(0xFF0891B2),
-},
+      // "mnuAcAssetsMovable": {
+      //   "title": "Movable Assets",
+      //   "subtitle": "Asset Register",
+      //   //"icon": Icons.inventory_2_outlined,
+      //   "icon": Icons.trolley,
+      //   "color": const Color(0xFF0891B2),
+      // },
 
 
       "mnuRptLedgerMkt": {
@@ -1027,20 +1028,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   });
   break;
 
-  case "mnuAcAssetsMovable":
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) =>
-          const MovableAssetScreen(),
-    ),
-  );
+  // case "mnuAcAssetsMovable":
+  // Navigator.push(
+  //   context,
+  //   MaterialPageRoute(
+  //     builder: (_) =>
+  //         const MovableAssetHubScreen(),
+  //   ),
+  // );
   break;
           // =================================================
           // SAMPLE REQUEST
           // =================================================
 
-           case "mnuSamplesReqClient":
+  case "mnuSamplesReqClient":
   SessionManager.getSession().then((session) {
     if (session == null) return;
 

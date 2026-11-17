@@ -3,6 +3,7 @@
 // ===============================
 
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:vyara_erp/models/sample_request_models.dart';
 import '../models/so_status_model.dart' hide ProductModel;
@@ -20,6 +21,7 @@ import '../models/sale_quotation_model.dart';
 import '../models/credit_limit_model.dart';
 import '../models/inv_print_model.dart';
 import '../models/movable_asset_model.dart';
+import '../models/movable_asset_receive_model.dart';
 
 class ApiService {
   static const String baseUrl = "https://vyaratiles.co.in/API/";
@@ -200,62 +202,89 @@ class ApiService {
   // =========================
   // LEDGER REPORT
   // =========================
-  static Future getLedgerReport({
-    required String clientIds,
-    required String fromDate,
-    required String toDate,
-    required bool mergeClients,
-    required bool grandTotal,
-    required String userId,
-    required String userPwd,
-  }) async {
-    try {
-      final url = Uri.parse("${baseUrl}Ledger");
 
-      final body = {
-        "ClientID": clientIds,
-        "FromDate": fromDate,
-        "ToDate": toDate,
-        "MergeClients": mergeClients,
-        "GrandTotal": grandTotal,
-        "UserID": userId,
-        "UserPwd": userPwd,
-        "VerNo": AppConfig.verNo,
-      };
+static Future<Uint8List> getLedgerReport({
+  required String clientIds,
+  required String fromDate,
+  required String toDate,
+  required bool mergeClients,
+  required bool grandTotal,
+  required String userId,
+  required String userPwd,
+}) async {
+  try {
+    final url = Uri.parse("${baseUrl}Ledger");
 
-      print("================================");
-      print("LEDGER REPORT API");
-      print("URL => $url");
-      print("BODY => ${jsonEncode(body)}");
-      print("================================");
+    final body = {
+      "ClientID": clientIds,
+      "FromDate": fromDate,
+      "ToDate": toDate,
+      "MergeClients": mergeClients,
+      "GrandTotal": grandTotal,
+      "UserID": userId,
+      "UserPwd": userPwd,
+      "VerNo": AppConfig.verNo,
+    };
 
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: jsonEncode(body),
-      );
+    print("================================");
+    print("LEDGER REPORT API");
+    print("URL => $url");
+    print("BODY => ${jsonEncode(body)}");
+    print("================================");
 
-      print("LEDGER STATUS => ${response.statusCode}");
-      print("LEDGER RESPONSE => ${response.body}");
+    final response = await http
+        .post(
+          url,
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/pdf, application/json",
+          },
+          body: jsonEncode(body),
+        )
+        // Large ledgers can take ~30 s on the server.
+        .timeout(const Duration(minutes: 3));
 
-      final data = jsonDecode(response.body);
+    final bytes = response.bodyBytes;
 
-      if (response.statusCode == 200 && data["StatusCode"] == 200) {
-        return data["Message"] ?? "";
-      }
+    print("LEDGER STATUS => ${response.statusCode}");
+    print("LEDGER CONTENT-TYPE => ${response.headers['content-type']}");
+    print("LEDGER SIZE => ${bytes.length} bytes");
 
-      final message = (data["Message"] ?? "Failed").toString();
+    // A real PDF always starts with "%PDF".
+    final isPdf = bytes.length > 4 &&
+        bytes[0] == 0x25 && // %
+        bytes[1] == 0x50 && // P
+        bytes[2] == 0x44 && // D
+        bytes[3] == 0x46; //   F
 
-      throw Exception(message);
-    } catch (e) {
-      print("LEDGER REPORT ERROR => $e");
-
-      throw Exception("LEDGER REPORT ERROR : $e");
+    if (response.statusCode == 200 && isPdf) {
+      return bytes;
     }
+
+    // Not a PDF: the server sent an error, usually as JSON
+    // {"StatusCode": ..., "Message": "..."}.
+    String message = "Failed to generate ledger.";
+    try {
+      final data = jsonDecode(utf8.decode(bytes));
+      if (data is Map && data["Message"] != null) {
+        message = data["Message"].toString();
+      }
+    } catch (_) {
+      final text = utf8.decode(bytes, allowMalformed: true).trim();
+      if (text.isNotEmpty && text.length < 300) message = text;
+    }
+
+    if (message.contains("No data to display report")) {
+      message = "No Record Found";
+    }
+
+    throw Exception(message);
+  
+  } catch (e) {
+    print("LEDGER REPORT ERROR => $e");
+    throw Exception(e.toString().replaceFirst("Exception: ", ""));
   }
+}
 
   // ================== Pdf API =======================
 
@@ -1813,4 +1842,124 @@ class ApiService {
       throw Exception(e.toString().replaceFirst("Exception: ", ""));
     }
   }
+
+// ===============================
+// PATCH: api_services.dart
+// ===============================
+//
+// 1) Add this import near the top with the other model imports:
+//
+//      import '../models/movable_asset_receive_model.dart';
+//
+// 2) Paste the two methods below inside the ApiService class.
+
+// ------------------------------------------------------------
+// MOVABLE ASSET RECEIVE - PENDING LIST
+// GET https://vyaratiles.co.in/api/movableAssetReceive
+// ------------------------------------------------------------
+static Future<List<MaReceiveRow>> getMovableAssetReceiveList({
+  required String userId,
+  required String userPwd,
+}) async {
+  try {
+    final uri = Uri.parse("${baseUrl}movableAssetReceive").replace(
+      queryParameters: {
+        "UserID": userId,
+        "UserPwd": userPwd,
+        "VerNo": AppConfig.verNo.toString(),
+      },
+    );
+
+    print("========================================");
+    print("MOVABLE ASSET RECEIVE LIST API");
+    print("USER ID => $userId");
+    print("========================================");
+
+    final response = await http.get(uri);
+
+    print("MA RECEIVE LIST STATUS => ${response.statusCode}");
+    print("MA RECEIVE LIST RESPONSE => ${response.body}");
+
+    if (response.statusCode != 200) {
+      throw Exception("Receive list failed: HTTP ${response.statusCode}");
+    }
+
+    final Map<String, dynamic> data = jsonDecode(response.body);
+
+    if (data["StatusCode"] != 200) {
+      throw Exception(
+        (data["Message"] ?? "Failed to load assets to receive.").toString(),
+      );
+    }
+
+    final List list = data["RAssets"] as List? ?? [];
+
+    return list
+        .whereType<Map>()
+        .map((e) => MaReceiveRow.fromJson(Map<String, dynamic>.from(e)))
+        // Only rows still waiting to be received.
+        .where((r) => !r.isReceived)
+        .toList();
+  } catch (e) {
+    print("MA RECEIVE LIST ERROR => $e");
+    throw Exception(e.toString().replaceFirst("Exception: ", ""));
+  }
+}
+
+// ------------------------------------------------------------
+// MOVABLE ASSET RECEIVE - SAVE ONE ROW
+// POST https://vyaratiles.co.in/api/movableAssetReceivedsave
+// Body: the row as received from the GET, with UserID / UserPwd /
+// VerNo filled in and isReceived = true.
+// Returns the server Message.
+// ------------------------------------------------------------
+static Future<String> receiveMovableAsset({
+  required String userId,
+  required String userPwd,
+  required MaReceiveRow row,
+}) async {
+  try {
+    final uri = Uri.parse("${baseUrl}movableAssetReceivedsave").replace(
+      queryParameters: {
+        "UserID": userId,
+        "UserPwd": userPwd,
+        "VerNo": AppConfig.verNo.toString(),
+      },
+    );
+
+    final body = row.toSaveJson(
+      userId: userId,
+      userPwd: userPwd,
+      verNo: AppConfig.verNo,
+    );
+
+    print("========================================");
+    print("MOVABLE ASSET RECEIVE SAVE API");
+    print("ROW => ${row.key}");
+    print("========================================");
+
+    final response = await http.post(
+      uri,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    print("MA RECEIVE SAVE STATUS => ${response.statusCode}");
+    print("MA RECEIVE SAVE RESPONSE => ${response.body}");
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data["StatusCode"] == 200) {
+      return (data["Message"] ?? "").toString();
+    }
+
+    throw Exception(
+      (data["Message"] ?? "Failed to receive asset.").toString(),
+    );
+  } catch (e) {
+    print("MA RECEIVE SAVE ERROR => $e");
+    throw Exception(e.toString().replaceFirst("Exception: ", ""));
+  }
+}
+
 }
