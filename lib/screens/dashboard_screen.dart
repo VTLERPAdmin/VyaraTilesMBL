@@ -248,7 +248,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 12),
 
                 Text(
-                  "Do you want to logout as\n$userName ?",
+                  "Do you want to logou as\n$userName ?",
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 15,
