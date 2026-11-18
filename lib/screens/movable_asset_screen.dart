@@ -790,6 +790,7 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
         : null;
 
     MaAsset? sAsset = existing?.asset;
+    MaLookupItem? sTax = existing?.tax;
     final hsnController = TextEditingController(
       text: existing?.hsnCode ?? sAsset?.hsnCode ?? "",
     );
@@ -875,6 +876,18 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    _dropdown<MaLookupItem>(
+                      label: "Tax (GST) *",
+                      searchHint: "Search Tax",
+                      value: sTax,
+                      items: () => lookups!.taxes,
+                      text: (t) => t.name,
+                      same: (a, b) => a.id == b.id,
+                      enabled: !isView,
+                      searchable: false,
+                      onChanged: (v) => setSheetState(() => sTax = v),
+                    ),
 
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
@@ -956,9 +969,7 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
                       children: [
                         Expanded(
                           child: Text(
-                            isView
-                                ? "Items (${sItems.length})"
-                                : "Items * (${sItems.length})",
+                            "Items (${sItems.length})",
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               color: primaryBlue,
@@ -996,7 +1007,7 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          "No items added yet. Tap \"Add Item\".",
+                          "No items added (optional).",
                           style: TextStyle(color: mutedColor, fontSize: 13),
                         ),
                       )
@@ -1056,10 +1067,10 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
                                 String? error;
                                 if (sAsset == null) {
                                   error = "Please select an Asset";
+                                } else if (sTax == null) {
+                                  error = "Please select a Tax (GST)";
                                 } else if (sPhoto == null) {
                                   error = "Please add a photo of the asset";
-                                } else if (sItems.isEmpty) {
-                                  error = "Please add at least one Item";
                                 } else if (addedLines.asMap().entries.any(
                                   (e) =>
                                       e.value.asset.id == sAsset!.id &&
@@ -1079,6 +1090,7 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
                                   MaAssetLine(
                                     asset: sAsset!,
                                     hsnCode: hsnController.text.trim(),
+                                    tax: sTax,
                                     items: List<MaItemEntry>.from(sItems),
                                     photoBytes: sPhoto!,
                                     photoExt: sPhotoExt,
@@ -1125,7 +1137,9 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
     final ok = await _confirm(
       title: "Delete Asset",
       message:
-          "Remove \"${line.asset.name}\" and its ${line.items.length} item(s) from this voucher?",
+          line.items.isEmpty
+              ? "Remove \"${line.asset.name}\" from this voucher?"
+              : "Remove \"${line.asset.name}\" and its ${line.items.length} item(s) from this voucher?",
       actionLabel: "Delete",
     );
 
@@ -1757,6 +1771,14 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
                   "Asset Code: ${_orDash(line.asset.assetCode)}",
                   style: const TextStyle(color: mutedColor, fontSize: 12),
                 ),
+                if (line.tax != null)
+                  Text(
+                    line.tax!.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: mutedColor, fontSize: 12),
+                  ),
+                if (line.items.isNotEmpty) ...[
                 const Divider(height: 16),
                 Text(
                   "Items (${line.items.length})",
@@ -1767,6 +1789,7 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
                   ),
                 ),
                 const SizedBox(height: 2),
+                ],
                 for (final e in shown)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
@@ -2026,7 +2049,9 @@ class _MovableAssetScreenState extends State<MovableAssetScreen>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "${line.items.length} item(s) • $first$more",
+                    line.items.isEmpty
+                        ? (line.tax?.name ?? "No items")
+                        : "${line.items.length} item(s) • $first$more",
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: mutedColor, fontSize: 12),

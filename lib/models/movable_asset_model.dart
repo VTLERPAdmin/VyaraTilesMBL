@@ -195,12 +195,13 @@ class MaItemEntry {
 }
 
 // ------------------------------------------------------------
-// One asset line of the voucher: the asset, its photo, and one or
-// more items.
+// One asset line of the voucher: the asset, its GST, its photo, and
+// zero or more items (items are optional).
 // ------------------------------------------------------------
 class MaAssetLine {
   final MaAsset asset;
   final String hsnCode;
+  final MaLookupItem? tax; // GST picked for the asset itself
   final List<MaItemEntry> items;
   final Uint8List photoBytes; // compressed photo of the asset
   final String photoExt; // jpg / png / ...
@@ -208,6 +209,7 @@ class MaAssetLine {
   MaAssetLine({
     required this.asset,
     required this.hsnCode,
+    this.tax,
     required this.items,
     required this.photoBytes,
     required this.photoExt,

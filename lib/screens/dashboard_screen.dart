@@ -835,13 +835,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         "icon": Icons.analytics_outlined,
         "color": const Color(0xFF0891B2),
       },
-      // "mnuAcAssetsMovable": {
-      //   "title": "Movable Assets",
-      //   "subtitle": "Asset Register",
-      //   //"icon": Icons.inventory_2_outlined,
-      //   "icon": Icons.trolley,
-      //   "color": const Color(0xFF0891B2),
-      // },
+      "mnuAcAssetsMovable": {
+        "title": "Movable Assets",
+        "subtitle": "Asset Register",
+        //"icon": Icons.inventory_2_outlined,
+        "icon": Icons.trolley,
+        "color": const Color(0xFF0891B2),
+      },
 
 
       "mnuRptLedgerMkt": {
@@ -1028,14 +1028,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   });
   break;
 
-  // case "mnuAcAssetsMovable":
-  // Navigator.push(
-  //   context,
-  //   MaterialPageRoute(
-  //     builder: (_) =>
-  //         const MovableAssetHubScreen(),
-  //   ),
-  // );
+  case "mnuAcAssetsMovable":
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) =>
+          const MovableAssetHubScreen(),
+    ),
+  );
   break;
           // =================================================
           // SAMPLE REQUEST

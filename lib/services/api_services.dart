@@ -1578,6 +1578,8 @@ static Future<Uint8List> getLedgerReport({
       throw Exception(e.toString().replaceFirst("Exception: ", ""));
     }
   }
+  
+
   // ===============================
   // PATCH: api_services.dart
   // ===============================
@@ -1649,8 +1651,9 @@ static Future<Uint8List> getLedgerReport({
   //   * the shape of a SubItems[] element (each item under an asset) —
   //     assumed to mirror the asset row: ItemID, ItemName, HsnCode,
   //     UoMCode, Qty, Rate, BasicAmt, GST, GrossAmt, Remarks
-  //   * the asset row's own Qty / UoMCode / GST: sent as 1 / "NOS" / an
-  //     empty GST (tax is picked per item in the app)
+  //   * the asset row's own Qty / UoMCode: sent as 1 / "NOS"
+  //   * the asset row's GST: the tax picked for the asset (GST.ID)
+  //   * an asset with no items is sent with "SubItems": []
   //   * the amount maths (see _gstObj / the totals below)
   //   * GST.Mode: 12 for an IGST tax, 11 otherwise (inferred from your
   //     sample: header 11, IGST row 12)
@@ -1769,7 +1772,16 @@ static Future<Uint8List> getLedgerReport({
           "Qty": assetQty,
           "Rate": l.asset.rate,
           "BasicAmt": assetBasic,
-          "GST": gstObj(),
+          // GST picked for the asset itself.
+          "GST": l.tax == null
+              ? gstObj()
+              : gstObj(
+                  id: l.tax!.id,
+                  heading: l.tax!.name,
+                  rate: taxRate(l.tax!.name),
+                  mode: l.tax!.name.toUpperCase().contains("IGST") ? 12 : 11,
+                  noCalc: true,
+                ),
           "GrossAmt": rowGross,
           "AssetImage": base64Encode(l.photoBytes),
           "Image": null,
